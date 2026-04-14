@@ -261,7 +261,7 @@ MIT — do whatever you want with it.
 ---
 
 <p align="center">
-  Built by a gamer who does <a href="https://www.youtube.com/@BT_01">no-damage boss fights when time permits</a> and builds <a href="https://github.com/RZ-Logic/jobsignal">open-source tools that help people</a>.
+  Built by a gamer who does <a href="https://www.youtube.com/@BT_01">no-damage boss fights when time permits</a> and builds <a href="https://github.com/RZ-Logic/jobsignal-engine">open-source tools that help people</a>.
   <br><br>
   <strong>If this saved you money on a GPU, star the repo ⭐</strong>
 </p>
