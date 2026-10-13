@@ -1,5 +1,6 @@
-# Bot data (alerts, price history, Discord IDs)
-data/
+# Bot data (alerts, price history, Discord IDs). Anchored to the repo root so
+# gpu_alerts/data/catalog.json stays tracked.
+/data/
 gpu_alerts.json
 gpu_price_history.json
 *.sqlite3

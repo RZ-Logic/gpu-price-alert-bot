@@ -94,3 +94,11 @@ it never saw during tuning:
   >= 0.90, per-query precision >= 0.90). Per-query precision is reported but
   queries with fewer than 5 accepted rows are flagged as too small to judge.
 - Scored once, with `eval/evaluate.py --label-field gold_label --check`.
+
+## Erratum (2026-10-12, after both runs)
+
+Addendum 1 says the blind labels came from two agents "that read each title". In
+the first held-out split the two agents split the titles between them (even and
+odd row ids), so each held-out title was read by one blind labeler. Both agents
+labelled every row only in the out-of-distribution set (Addendum 2). The
+protocol, the targets and the scores are unchanged.

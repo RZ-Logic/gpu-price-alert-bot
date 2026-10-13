@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 360" width="100%" role="img" aria-labelledby="banner-title banner-desc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+  <title id="banner-title">GPU Deals Canada</title>
+  <desc id="banner-desc">GPU Deals Canada: a self-hosted Discord bot that checks six Canadian retailers and pings you when the exact GPU you want drops under your price, in stock and sold by the retailer. Every decision is deterministic code; the title matcher's accuracy is measured on held-out listings.</desc>
+
+  <rect width="1280" height="360" fill="#0B1220"/>
+
+  <g opacity="0.06" stroke="#94A3B8" stroke-width="0.5">
+    <line x1="0" y1="80"  x2="1280" y2="80"/>
+    <line x1="0" y1="280" x2="1280" y2="280"/>
+  </g>
+
+  <text x="80" y="116" font-size="56" font-weight="500" fill="#F8FAFC" letter-spacing="-0.5">GPU Deals Canada</text>
+
+  <text x="80" y="160" font-size="20" font-weight="400" fill="#CBD5E1" letter-spacing="0.1">A Discord ping when the exact GPU you want drops under your price.</text>
+
+  <text x="80" y="186" font-size="13" font-weight="400" fill="#64748B" letter-spacing="0.2">Six Canadian retailers. In stock, new and sold by the retailer by default. Matching accuracy measured, not assumed.</text>
+
+  <line x1="170" y1="236" x2="1110" y2="236" stroke="#334155" stroke-width="0.5" stroke-dasharray="2 4"/>
+
+  <g font-size="11" font-weight="500" letter-spacing="0.2">
+    <g>
+      <rect x="170" y="210" width="96" height="52" rx="6" fill="none" stroke="#475569" stroke-width="0.75"/>
+      <text x="218" y="241" fill="#CBD5E1" text-anchor="middle">6 retailers</text>
+    </g>
+    <g>
+      <rect x="280" y="210" width="96" height="52" rx="6" fill="none" stroke="#475569" stroke-width="0.75"/>
+      <text x="328" y="235" fill="#CBD5E1" text-anchor="middle">fetch</text>
+      <text x="328" y="251" font-size="9" font-weight="400" fill="#64748B" text-anchor="middle">blocked is not empty</text>
+    </g>
+    <g>
+      <rect x="390" y="210" width="96" height="52" rx="6" fill="none" stroke="#475569" stroke-width="0.75"/>
+      <text x="438" y="235" fill="#CBD5E1" text-anchor="middle">parse</text>
+      <text x="438" y="251" font-size="9" font-weight="400" fill="#64748B" text-anchor="middle">embedded JSON first</text>
+    </g>
+    <g>
+      <rect x="500" y="210" width="150" height="52" rx="6" fill="none" stroke="#D97706" stroke-width="1"/>
+      <text x="575" y="235" fill="#FBBF24" text-anchor="middle">exact model match</text>
+      <text x="575" y="251" font-size="9" font-weight="400" fill="#A16207" text-anchor="middle">suffix + VRAM, measured</text>
+    </g>
+    <g>
+      <rect x="664" y="210" width="118" height="52" rx="6" fill="none" stroke="#475569" stroke-width="0.75"/>
+      <text x="723" y="235" fill="#CBD5E1" text-anchor="middle">buyable offer</text>
+      <text x="723" y="251" font-size="9" font-weight="400" fill="#64748B" text-anchor="middle">stock, seller, condition</text>
+    </g>
+    <g>
+      <rect x="796" y="210" width="118" height="52" rx="6" fill="none" stroke="#475569" stroke-width="0.75"/>
+      <text x="855" y="235" fill="#CBD5E1" text-anchor="middle">alert state</text>
+      <text x="855" y="251" font-size="9" font-weight="400" fill="#64748B" text-anchor="middle">ping once, re-arm</text>
+    </g>
+    <g>
+      <rect x="928" y="210" width="182" height="52" rx="6" fill="none" stroke="#475569" stroke-width="0.75"/>
+      <text x="1019" y="235" fill="#CBD5E1" text-anchor="middle">Discord ping</text>
+      <text x="1019" y="251" font-size="9" font-weight="400" fill="#64748B" text-anchor="middle">price, link, 30-day context</text>
+    </g>
+  </g>
+
+  <g font-size="11" font-weight="400" fill="#475569" letter-spacing="0.3">
+    <text x="170" y="300">No model at runtime. Every decision is deterministic code with a test; a wrong deal ping is worse than none.</text>
+  </g>
+
+  <g font-size="10" font-weight="400" fill="#334155" letter-spacing="0.4">
+    <text x="1110" y="322" text-anchor="end">Best Buy  ·  Canada Computers  ·  Memory Express  ·  Newegg  ·  Amazon.ca  ·  Walmart</text>
+  </g>
+</svg>

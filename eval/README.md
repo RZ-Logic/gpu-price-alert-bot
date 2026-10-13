@@ -13,11 +13,16 @@ rows.
 |---|---|
 | `dev.jsonl` | 917 labelled listing rows from the 2026-10-12 live audit. The only data used for tuning. |
 | `evaluate.py` | Scores v1 and v2 on any labelled JSONL file. |
-| `baseline_v1.py` | v1's filter, copied from `gpu_discord_bot.py` so the eval never imports the old bot. |
+| `baseline_v1.py` | v1's filter, copied from v1's `gpu_discord_bot.py` (removed in v2; it is in the git history at commit `ba88c4b`) so the eval never imports the old bot. |
 | `PREREGISTRATION.md` | Targets and protocol, fixed before tuning. |
 | `dev_label_disputes.jsonl` | Dev labels the matcher author believes are wrong, with reasons. |
+| `heldout.jsonl` | The held-out split (414 rows, 397 scored), with `regex_label`, `blind_label` and the headline `gold_label`. Scored once. |
+| `heldout_disagreements.jsonl` | The 5 held-out rows where the automated and blind labels disagree; excluded from the headline. |
+| `ood_bestbuy_memoryexpress.jsonl` | 869 rows from Best Buy and Memory Express, retailers absent from tuning, labelled by two blind labelers (`label_1`, `label_2`, `gold_label`). Scored once. |
+| `adversarial_titles.py` | The code review's 100 trick titles; prints how many the matcher still accepts. |
+| `results/` | Saved outputs of the scored runs and the post-review regression run. |
 
-The held-out test split is not in this repo.
+The held-out and out-of-distribution sets were kept out of the matcher author's reach until they were scored, and were added here afterwards.
 
 ## How to run
 
@@ -27,7 +32,7 @@ From the repo root:
 python eval/evaluate.py eval/dev.jsonl
 python eval/evaluate.py eval/dev.jsonl --top 25                      # longer error lists
 python eval/evaluate.py eval/dev.jsonl --json-out dev_metrics.json   # metrics as JSON
-python eval/evaluate.py test.jsonl --label-field gold --check        # exit 1 on a missed target
+python eval/evaluate.py eval/heldout.jsonl --label-field gold_label --check   # exit 1 on a missed target
 python eval/evaluate.py eval/dev.jsonl --disputes eval/dev_label_disputes.jsonl   # sensitivity only
 ```
 
@@ -35,7 +40,8 @@ python eval/evaluate.py eval/dev.jsonl --disputes eval/dev_label_disputes.jsonl 
 
 Every row is one listing a retailer returned for one search, with a label that
 says what the listing really is: `correct` (the searched model), `wrong_model`,
-`laptop`, `prebuilt`, `accessory`, `correct_bundle` or `unknown`.
+`laptop`, `prebuilt`, `accessory`, `bundle`, `other`, `correct_bundle`, `unknown` or `unsure`.
+Every label except `correct` is negative; `unknown` and `unsure` are excluded.
 
 - Only `correct` counts as a hit. A card sold together with a power supply
   (`correct_bundle`) is a miss, because its price is not the card's price.
