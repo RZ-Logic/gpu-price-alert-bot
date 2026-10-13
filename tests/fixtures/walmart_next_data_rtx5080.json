@@ -1,0 +1,584 @@
+{
+ "_note": "walmart.ca/search?q=rtx+5080+graphics+card __NEXT_DATA__ trimmed to 6 items/selected keys",
+ "__NEXT_DATA__": {
+  "props": {
+   "pageProps": {
+    "initialData": {
+     "searchResult": {
+      "itemStacks": [
+       {
+        "items": [
+         {
+          "__typename": "Product",
+          "usItemId": "3LWOR8MAWABO",
+          "name": "ASUS VCX PRIME-RTX5060TI-16G GeForce RTX 5060 Ti 16GB GDDR7 16G GDDR7 128B",
+          "price": 1239.99,
+          "priceInfo": {
+           "itemPrice": "",
+           "linePrice": "$1,239.99",
+           "linePriceDisplay": "$1,239.99",
+           "savings": "",
+           "savingsAmt": 0,
+           "wasPrice": "",
+           "wasPriceSupportText": "",
+           "unitPrice": "",
+           "shipPrice": "",
+           "minPrice": 0,
+           "minPriceForVariant": "",
+           "priceRangeString": "",
+           "subscriptionPrice": "",
+           "subscriptionString": "",
+           "subscriptionDiscountPrice": "",
+           "priceDisplayCondition": "",
+           "finalCostByWeight": false,
+           "submapType": "",
+           "eaPricingText": "",
+           "eaPricingPreText": "",
+           "memberPriceString": "",
+           "subscriptionDualPrice": null,
+           "subscriptionPercentage": null,
+           "isB2BPrice": false,
+           "dutyFee": null,
+           "priceDisplayType": "UNKNOWN"
+          },
+          "canonicalUrl": "/en/ip/ASUS-VCX-PRIME-RTX5060TI-16G-GeForce-RTX-5060-Ti-16GB-GDDR7-16G-GDDR7-128B/3LWOR8MAWABO",
+          "sellerId": "01D9206E48774018B61F1182D78E1109",
+          "sellerName": "Newegg Canada Inc.",
+          "sellerType": "EXTERNAL",
+          "availabilityStatusV2": {
+           "display": "In stock",
+           "value": "IN_STOCK"
+          },
+          "isOutOfStock": false,
+          "canAddToCart": true,
+          "isPreowned": null,
+          "conditionV2": null,
+          "preownedCondition": null,
+          "sponsoredProduct": {
+           "spQs": "fwrouwsx6bNdo9OUQM6wpDwoXLOKbgQTGsdA2zNXFsNGVN3PKlrdh1S3tiDb1C1Zp35DvqnpBDmMQI5zsJcwvPt5bWxpgcj5uc8MSxHqKY9Rrm0kO9xWB0pFgws1GLrbuit-plWAkMWY3_grRDz-seBA16FH5u8_3Lya4oRTiPQpbXfeKm50Zn8xoVUZm7kJVou3_w1O7zcNkYR_bljlY8TnSmv66OLzJ7Z4DI5yL8CFtSe8xgpNjnAuj475F4Ec",
+           "clickBeacon": "https://www.walmart.ca/wapcrs/track?adUid=0829b374-cf15-4b91-b157-e09342a1ef31&pgId=rtx+5080+graphics+card&spQs=fwrouwsx6bNdo9OUQM6wpDwoXLOKbgQTGsdA2zNXFsNGVN3PKlrdh1S3tiDb1C1Zp35DvqnpBDmMQI5zsJcwvPt5bWxpgcj5uc8MSxHqKY9Rrm0kO9xWB0pFgws1GLrbuit-plWAkMWY3_grRDz-seBA16FH5u8_3Lya4oRTiPQpbXfeKm50Zn8xoVUZm7kJVou3_w1O7zcNkYR_bljlY8TnSmv66OLzJ7Z4DI5yL8CFtSe8xgpNjnAuj475F4Ec&storeId=1061&pt=search&mloc=sp-search-middle&bkt=ace1_default%7Cace2_default%7Cace3_default%7Csearch_default&pltfm=desktop&rdf=0&plmt=__plmt__&eventST=__eventST__&pos=__pos__&bt=__bt__&tn=WMT_CA&wtn=qxjed8&tax=10003_20038_6000199048468&dr=false",
+           "spTags": "",
+           "viewBeacon": null,
+           "metaInfo": null
+          },
+          "isSponsoredFlag": true,
+          "catalogProductType": null,
+          "fulfillmentType": "MARKETPLACE",
+          "fulfillmentBadges": [],
+          "badges": {
+           "flags": null,
+           "tags": [],
+           "groups": [
+            {
+             "__typename": "UnifiedBadgeGroup",
+             "name": "fulfillment",
+             "members": [
+              {
+               "__typename": "BadgeGroupMember",
+               "id": "L1053",
+               "key": "FF_SHIPPING",
+               "memberType": "badge",
+               "otherInfo": null,
+               "rank": 1,
+               "textTemplate": null,
+               "textValues": null,
+               "slaText": "Sun Oct 18",
+               "slaDate": null,
+               "slaDateISO": null,
+               "sla": null,
+               "styleId": "FF_STYLE",
+               "text": "Free delivery, ",
+               "type": "LABEL",
+               "iconId": null,
+               "templates": null,
+               "badgeContent": null
+              }
+             ]
+            }
+           ],
+           "groupsV2": null
+          }
+         },
+         {
+          "__typename": "Product",
+          "usItemId": "4TYS6AQK15IV",
+          "name": "Asus ROG Strix B850-A GAMING WIFI Gaming Desktop Motherboard - AMD B850 Chipset - Socket AM5 - ATX (90mb1j50-m0aay0)",
+          "price": 329.99,
+          "priceInfo": {
+           "itemPrice": "",
+           "linePrice": "$329.99",
+           "linePriceDisplay": "Now $329.99",
+           "savings": "You save $70.00",
+           "savingsAmt": 70,
+           "wasPrice": "$399.99",
+           "wasPriceSupportText": "",
+           "unitPrice": "",
+           "shipPrice": "",
+           "minPrice": 0,
+           "minPriceForVariant": "",
+           "priceRangeString": "",
+           "subscriptionPrice": "",
+           "subscriptionString": "",
+           "subscriptionDiscountPrice": "",
+           "priceDisplayCondition": "",
+           "finalCostByWeight": false,
+           "submapType": "",
+           "eaPricingText": "",
+           "eaPricingPreText": "",
+           "memberPriceString": "",
+           "subscriptionDualPrice": null,
+           "subscriptionPercentage": null,
+           "isB2BPrice": false,
+           "dutyFee": null,
+           "priceDisplayType": "UNKNOWN"
+          },
+          "canonicalUrl": "/en/ip/Asus-ROG-Strix-B850-A-GAMING-WIFI-Gaming-Desktop-Motherboard-AMD-B850-Chipset-Socket-AM5-ATX-90mb1j50-m0aay0/4TYS6AQK15IV",
+          "sellerId": "01D9206E48774018B61F1182D78E1109",
+          "sellerName": "Newegg Canada Inc.",
+          "sellerType": "EXTERNAL",
+          "availabilityStatusV2": {
+           "display": "In stock",
+           "value": "IN_STOCK"
+          },
+          "isOutOfStock": false,
+          "canAddToCart": true,
+          "isPreowned": null,
+          "conditionV2": null,
+          "preownedCondition": null,
+          "sponsoredProduct": {
+           "spQs": "4VuqBdJL_iHjjB9FLu4RjPu-ya8aepgrfYin6C0r4J0rxBc0jlla_s1dh90bPNOWp35DvqnpBDmMQI5zsJcwvPt5bWxpgcj5uc8MSxHqKY9Rrm0kO9xWB0pFgws1GLrbuit-plWAkMWY3_grRDz-sbjfLPMa4llueSBTuOyzjA_vr1vSeyg3HgrMwtSRGy3uVou3_w1O7zcNkYR_bljlY8TnSmv66OLzJ7Z4DI5yL8CFtSe8xgpNjnAuj475F4Ec",
+           "clickBeacon": "https://www.walmart.ca/wapcrs/track?adUid=0829b374-cf15-4b91-b157-e09342a1ef31&pgId=rtx+5080+graphics+card&spQs=4VuqBdJL_iHjjB9FLu4RjPu-ya8aepgrfYin6C0r4J0rxBc0jlla_s1dh90bPNOWp35DvqnpBDmMQI5zsJcwvPt5bWxpgcj5uc8MSxHqKY9Rrm0kO9xWB0pFgws1GLrbuit-plWAkMWY3_grRDz-sbjfLPMa4llueSBTuOyzjA_vr1vSeyg3HgrMwtSRGy3uVou3_w1O7zcNkYR_bljlY8TnSmv66OLzJ7Z4DI5yL8CFtSe8xgpNjnAuj475F4Ec&storeId=1061&pt=search&mloc=sp-search-middle&bkt=ace1_default%7Cace2_default%7Cace3_default%7Csearch_default&pltfm=desktop&rdf=0&plmt=__plmt__&eventST=__eventST__&pos=__pos__&bt=__bt__&tn=WMT_CA&wtn=qxjed8&tax=10003_20038_6000199048468&dr=false",
+           "spTags": "",
+           "viewBeacon": null,
+           "metaInfo": null
+          },
+          "isSponsoredFlag": true,
+          "catalogProductType": null,
+          "fulfillmentType": "MARKETPLACE",
+          "fulfillmentBadges": [],
+          "badges": {
+           "flags": [
+            {
+             "__typename": "BaseBadge",
+             "key": "REDUCED_PRICE",
+             "bundleId": null,
+             "text": "Reduced price",
+             "type": "LABEL",
+             "id": "L1700",
+             "styleId": "SECONDARY_BLUE_REGULAR"
+            }
+           ],
+           "tags": [],
+           "groups": [
+            {
+             "__typename": "UnifiedBadgeGroup",
+             "name": "fulfillment",
+             "members": [
+              {
+               "__typename": "BadgeGroupMember",
+               "id": "L1053",
+               "key": "FF_SHIPPING",
+               "memberType": "badge",
+               "otherInfo": null,
+               "rank": 1,
+               "textTemplate": null,
+               "textValues": null,
+               "slaText": "Sun Oct 18",
+               "slaDate": null,
+               "slaDateISO": null,
+               "sla": null,
+               "styleId": "FF_STYLE",
+               "text": "Free delivery, ",
+               "type": "LABEL",
+               "iconId": null,
+               "templates": null,
+               "badgeContent": null
+              }
+             ]
+            }
+           ],
+           "groupsV2": null
+          }
+         },
+         {
+          "__typename": "Product",
+          "usItemId": "6V9WW03P4HDW",
+          "name": "Intel Core Ultra 7 265KF - Core Ultra 7 (Series 2) Arrow Lake 20-Core (8P+12E), LGA 1851, 125W Desktop Processor - BX80768265KF",
+          "price": 439.99,
+          "priceInfo": {
+           "itemPrice": "",
+           "linePrice": "$439.99",
+           "linePriceDisplay": "Now $439.99",
+           "savings": "You save $130.00",
+           "savingsAmt": 130,
+           "wasPrice": "$569.99",
+           "wasPriceSupportText": "",
+           "unitPrice": "",
+           "shipPrice": "",
+           "minPrice": 0,
+           "minPriceForVariant": "",
+           "priceRangeString": "",
+           "subscriptionPrice": "",
+           "subscriptionString": "",
+           "subscriptionDiscountPrice": "",
+           "priceDisplayCondition": "",
+           "finalCostByWeight": false,
+           "submapType": "",
+           "eaPricingText": "",
+           "eaPricingPreText": "",
+           "memberPriceString": "",
+           "subscriptionDualPrice": null,
+           "subscriptionPercentage": null,
+           "isB2BPrice": false,
+           "dutyFee": null,
+           "priceDisplayType": "UNKNOWN"
+          },
+          "canonicalUrl": "/en/ip/Intel-Core-Ultra-7-265KF-Core-Ultra-7-Series-2-Arrow-Lake-20-Core-8P-12E-LGA-1851-125W-Desktop-Processor-BX80768265KF/6V9WW03P4HDW",
+          "sellerId": "01D9206E48774018B61F1182D78E1109",
+          "sellerName": "Newegg Canada Inc.",
+          "sellerType": "EXTERNAL",
+          "availabilityStatusV2": {
+           "display": "In stock",
+           "value": "IN_STOCK"
+          },
+          "isOutOfStock": false,
+          "canAddToCart": true,
+          "isPreowned": null,
+          "conditionV2": null,
+          "preownedCondition": null,
+          "sponsoredProduct": {
+           "spQs": "5Mud00eWtYayIKntawEAyvzvyqstgILRsrLzTh8BHK7dp2lcfSdODrjxkdL_j_MXpjKDtimyi5dG72xloT0bdUt8FDAxDpt8lVb6DqzLdqebuhCwAyjU78ifTRkR_hhArZF7OvyJadTgkNWHuvamhypsOfj0yqi9U69UWhWUcFe8TPdc8-5yV1eHYKQ6SDIinz5np4WDqJJzZ5Ki-QucYwBmCjwiFJD7c28KGi4yKLsW6Xi6FDQ3WZOBvNkHcS-i",
+           "clickBeacon": "https://www.walmart.ca/wapcrs/track?adUid=0829b374-cf15-4b91-b157-e09342a1ef31&pgId=rtx+5080+graphics+card&spQs=5Mud00eWtYayIKntawEAyvzvyqstgILRsrLzTh8BHK7dp2lcfSdODrjxkdL_j_MXpjKDtimyi5dG72xloT0bdUt8FDAxDpt8lVb6DqzLdqebuhCwAyjU78ifTRkR_hhArZF7OvyJadTgkNWHuvamhypsOfj0yqi9U69UWhWUcFe8TPdc8-5yV1eHYKQ6SDIinz5np4WDqJJzZ5Ki-QucYwBmCjwiFJD7c28KGi4yKLsW6Xi6FDQ3WZOBvNkHcS-i&storeId=1061&pt=search&mloc=sp-search-middle&bkt=ace1_default%7Cace2_default%7Cace3_default%7Csearch_default&pltfm=desktop&rdf=0&plmt=__plmt__&eventST=__eventST__&pos=__pos__&bt=__bt__&tn=WMT_CA&wtn=qxjed8&tax=10003_20038_6000199048468&dr=false",
+           "spTags": "",
+           "viewBeacon": null,
+           "metaInfo": null
+          },
+          "isSponsoredFlag": true,
+          "catalogProductType": null,
+          "fulfillmentType": "MARKETPLACE",
+          "fulfillmentBadges": [],
+          "badges": {
+           "flags": [
+            {
+             "__typename": "BaseBadge",
+             "key": "FLASH_DEAL",
+             "bundleId": null,
+             "text": "Flash Deal",
+             "type": "LABEL",
+             "id": "L3014",
+             "styleId": "TERTIARY_WARNINGMIN_BOLD"
+            }
+           ],
+           "tags": [],
+           "groups": [
+            {
+             "__typename": "UnifiedBadgeGroup",
+             "name": "fulfillment",
+             "members": [
+              {
+               "__typename": "BadgeGroupMember",
+               "id": "L1053",
+               "key": "FF_SHIPPING",
+               "memberType": "badge",
+               "otherInfo": null,
+               "rank": 1,
+               "textTemplate": null,
+               "textValues": null,
+               "slaText": "Sun Oct 18",
+               "slaDate": null,
+               "slaDateISO": null,
+               "sla": null,
+               "styleId": "FF_STYLE",
+               "text": "Free delivery, ",
+               "type": "LABEL",
+               "iconId": null,
+               "templates": null,
+               "badgeContent": null
+              }
+             ]
+            }
+           ],
+           "groupsV2": null
+          }
+         },
+         {
+          "__typename": "Product",
+          "usItemId": "359G2N1VI86G",
+          "name": "Intel Core i9 i9-14900K - 3.2 GHz - 24-core - 32 threads - 36 MB cache - FCLGA1700 Socket - Box",
+          "price": 759.99,
+          "priceInfo": {
+           "itemPrice": "",
+           "linePrice": "$759.99",
+           "linePriceDisplay": "Now $759.99",
+           "savings": "You save $240.00",
+           "savingsAmt": 240,
+           "wasPrice": "$999.99",
+           "wasPriceSupportText": "",
+           "unitPrice": "",
+           "shipPrice": "",
+           "minPrice": 0,
+           "minPriceForVariant": "",
+           "priceRangeString": "",
+           "subscriptionPrice": "",
+           "subscriptionString": "",
+           "subscriptionDiscountPrice": "",
+           "priceDisplayCondition": "",
+           "finalCostByWeight": false,
+           "submapType": "",
+           "eaPricingText": "",
+           "eaPricingPreText": "",
+           "memberPriceString": "",
+           "subscriptionDualPrice": null,
+           "subscriptionPercentage": null,
+           "isB2BPrice": false,
+           "dutyFee": null,
+           "priceDisplayType": "UNKNOWN"
+          },
+          "canonicalUrl": "/en/ip/Intel-Core-i9-i9-14900K-3-2-GHz-24-core-32-threads-36-MB-cache-FCLGA1700-Socket-Box/359G2N1VI86G",
+          "sellerId": "01D9206E48774018B61F1182D78E1109",
+          "sellerName": "Newegg Canada Inc.",
+          "sellerType": "EXTERNAL",
+          "availabilityStatusV2": {
+           "display": "In stock",
+           "value": "IN_STOCK"
+          },
+          "isOutOfStock": false,
+          "canAddToCart": true,
+          "isPreowned": null,
+          "conditionV2": null,
+          "preownedCondition": null,
+          "sponsoredProduct": {
+           "spQs": "70gKvovhAO_sf1hThOiK9ONlVhIg1QVXPcAqvwclAurdp2lcfSdODrjxkdL_j_MXUv4NpR3-_M4uUGnLx-u1ckt8FDAxDpt8lVb6DqzLdqfyGYUsfCZ1OBA1sVAmiEelrWA1Sw_gPPO8grpmXb0SNWnerAuua5XIgxhiEvIKE3cg-YAwkbqElyO6Hijt2pBYnAffGJ91ez10U-C-ijKPDyWz7bg47eDKXPhQdUouXfRgg4CM5Vt_BGpPhzur3r36",
+           "clickBeacon": "https://www.walmart.ca/wapcrs/track?adUid=0829b374-cf15-4b91-b157-e09342a1ef31&pgId=rtx+5080+graphics+card&spQs=70gKvovhAO_sf1hThOiK9ONlVhIg1QVXPcAqvwclAurdp2lcfSdODrjxkdL_j_MXUv4NpR3-_M4uUGnLx-u1ckt8FDAxDpt8lVb6DqzLdqfyGYUsfCZ1OBA1sVAmiEelrWA1Sw_gPPO8grpmXb0SNWnerAuua5XIgxhiEvIKE3cg-YAwkbqElyO6Hijt2pBYnAffGJ91ez10U-C-ijKPDyWz7bg47eDKXPhQdUouXfRgg4CM5Vt_BGpPhzur3r36&storeId=1061&pt=search&mloc=sp-search-middle&bkt=ace1_default%7Cace2_default%7Cace3_default%7Csearch_default&pltfm=desktop&rdf=0&plmt=__plmt__&eventST=__eventST__&pos=__pos__&bt=__bt__&tn=WMT_CA&wtn=qxjed8&tax=10003_20038_6000199048468&dr=false",
+           "spTags": "",
+           "viewBeacon": null,
+           "metaInfo": null
+          },
+          "isSponsoredFlag": true,
+          "catalogProductType": null,
+          "fulfillmentType": "MARKETPLACE",
+          "fulfillmentBadges": [],
+          "badges": {
+           "flags": [
+            {
+             "__typename": "BaseBadge",
+             "key": "REDUCED_PRICE",
+             "bundleId": null,
+             "text": "Reduced price",
+             "type": "LABEL",
+             "id": "L1700",
+             "styleId": "SECONDARY_BLUE_REGULAR"
+            }
+           ],
+           "tags": [],
+           "groups": [
+            {
+             "__typename": "UnifiedBadgeGroup",
+             "name": "fulfillment",
+             "members": [
+              {
+               "__typename": "BadgeGroupMember",
+               "id": "L1053",
+               "key": "FF_SHIPPING",
+               "memberType": "badge",
+               "otherInfo": null,
+               "rank": 1,
+               "textTemplate": null,
+               "textValues": null,
+               "slaText": "Sun Oct 18",
+               "slaDate": null,
+               "slaDateISO": null,
+               "sla": null,
+               "styleId": "FF_STYLE",
+               "text": "Free delivery, ",
+               "type": "LABEL",
+               "iconId": null,
+               "templates": null,
+               "badgeContent": null
+              }
+             ]
+            }
+           ],
+           "groupsV2": null
+          }
+         },
+         {
+          "__typename": "Product",
+          "usItemId": "6JJBITOPURKZ",
+          "name": "ASUS PRIME GeForce RTX 5080 16GB GDDR7 PCI Express 5.0 ATX Video Card PRIME-RTX5080-O16G-EVO",
+          "price": 2369.99,
+          "priceInfo": {
+           "itemPrice": "",
+           "linePrice": "$2,369.99",
+           "linePriceDisplay": "$2,369.99",
+           "savings": "",
+           "savingsAmt": 0,
+           "wasPrice": "",
+           "wasPriceSupportText": "",
+           "unitPrice": "",
+           "shipPrice": "",
+           "minPrice": 0,
+           "minPriceForVariant": "",
+           "priceRangeString": "",
+           "subscriptionPrice": "",
+           "subscriptionString": "",
+           "subscriptionDiscountPrice": "",
+           "priceDisplayCondition": "",
+           "finalCostByWeight": false,
+           "submapType": "",
+           "eaPricingText": "",
+           "eaPricingPreText": "",
+           "memberPriceString": "",
+           "subscriptionDualPrice": null,
+           "subscriptionPercentage": null,
+           "isB2BPrice": false,
+           "dutyFee": null,
+           "priceDisplayType": "UNKNOWN"
+          },
+          "canonicalUrl": "/en/ip/ASUS-PRIME-GeForce-RTX-5080-16GB-GDDR7-PCI-Express-5-0-ATX-Video-Card-PRIME-RTX5080-O16G-EVO/6JJBITOPURKZ?classType=REGULAR",
+          "sellerId": "01D9206E48774018B61F1182D78E1109",
+          "sellerName": "Newegg Canada Inc.",
+          "sellerType": "EXTERNAL",
+          "availabilityStatusV2": {
+           "display": "In stock",
+           "value": "IN_STOCK"
+          },
+          "isOutOfStock": false,
+          "canAddToCart": true,
+          "isPreowned": null,
+          "conditionV2": null,
+          "preownedCondition": null,
+          "sponsoredProduct": null,
+          "isSponsoredFlag": false,
+          "catalogProductType": "Computer Video Cards",
+          "fulfillmentType": "MARKETPLACE",
+          "fulfillmentBadges": [],
+          "badges": {
+           "flags": null,
+           "tags": [],
+           "groups": [
+            {
+             "__typename": "UnifiedBadgeGroup",
+             "name": "fulfillment",
+             "members": [
+              {
+               "__typename": "BadgeGroupMember",
+               "id": "L1053",
+               "key": "FF_SHIPPING",
+               "memberType": "badge",
+               "otherInfo": null,
+               "rank": 1,
+               "textTemplate": null,
+               "textValues": null,
+               "slaText": "Sun Oct 18",
+               "slaDate": null,
+               "slaDateISO": null,
+               "sla": null,
+               "styleId": "FF_STYLE",
+               "text": "Free delivery, ",
+               "type": "LABEL",
+               "iconId": null,
+               "templates": null,
+               "badgeContent": null
+              }
+             ]
+            }
+           ],
+           "groupsV2": null
+          }
+         },
+         {
+          "__typename": "Product",
+          "usItemId": "53GAAYOCK3YW",
+          "name": "Gigabyte NVIDIA GeForce RTX 5080 WINDFORCE SFF Overclocked Triple Fan 16GB GDDR7 PCIe 5.0 Graphics Card V-N5080WF3OC-16GD",
+          "price": 2499.99,
+          "priceInfo": {
+           "itemPrice": "",
+           "linePrice": "$2,499.99",
+           "linePriceDisplay": "$2,499.99",
+           "savings": "",
+           "savingsAmt": 0,
+           "wasPrice": "",
+           "wasPriceSupportText": "",
+           "unitPrice": "",
+           "shipPrice": "",
+           "minPrice": 0,
+           "minPriceForVariant": "",
+           "priceRangeString": "",
+           "subscriptionPrice": "",
+           "subscriptionString": "",
+           "subscriptionDiscountPrice": "",
+           "priceDisplayCondition": "",
+           "finalCostByWeight": false,
+           "submapType": "",
+           "eaPricingText": "",
+           "eaPricingPreText": "",
+           "memberPriceString": "",
+           "subscriptionDualPrice": null,
+           "subscriptionPercentage": null,
+           "isB2BPrice": false,
+           "dutyFee": null,
+           "shippingFee": 69.99,
+           "priceDisplayType": "UNKNOWN"
+          },
+          "canonicalUrl": "/en/ip/Gigabyte-NVIDIA-GeForce-RTX-5080-WINDFORCE-SFF-Overclocked-Triple-Fan-16GB-GDDR7-PCIe-5-0-Graphics-Card-V-N5080WF3OC-16GD/53GAAYOCK3YW?classType=REGULAR",
+          "sellerId": "164A8DDAFCE442FB9EDB88A109C89CEF",
+          "sellerName": "stricklands distribution inc.",
+          "sellerType": "EXTERNAL",
+          "availabilityStatusV2": {
+           "display": "In stock",
+           "value": "IN_STOCK"
+          },
+          "isOutOfStock": false,
+          "canAddToCart": true,
+          "isPreowned": null,
+          "conditionV2": null,
+          "preownedCondition": null,
+          "sponsoredProduct": null,
+          "isSponsoredFlag": false,
+          "catalogProductType": "Computer Video Cards",
+          "fulfillmentType": "MARKETPLACE",
+          "fulfillmentBadges": [],
+          "badges": {
+           "flags": null,
+           "tags": [],
+           "groups": [
+            {
+             "__typename": "UnifiedBadgeGroup",
+             "name": "fulfillment",
+             "members": [
+              {
+               "__typename": "BadgeGroupMember",
+               "id": "L1053",
+               "key": "FF_SHIPPING",
+               "memberType": "badge",
+               "otherInfo": null,
+               "rank": 1,
+               "textTemplate": null,
+               "textValues": null,
+               "slaText": "Fri Oct 23",
+               "slaDate": null,
+               "slaDateISO": null,
+               "sla": null,
+               "styleId": "FF_STYLE",
+               "text": "Delivery, ",
+               "type": "LABEL",
+               "iconId": null,
+               "templates": null,
+               "badgeContent": null
+              }
+             ]
+            }
+           ],
+           "groupsV2": null
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   }
+  }
+ }
+}

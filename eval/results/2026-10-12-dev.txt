@@ -1,0 +1,60 @@
+eval\dev.jsonl: 881 rows scored, 36 excluded as 'unknown', label field 'regex_label'
+
+== v1 substring filter ==
+overall  P 0.755  R 0.831  F1 0.791  TP 354  FP 115  FN 72  TN 340
+query               P      R     F1   TP   FP   FN   TN
+ARC B580        1.000  0.500  0.667    4    0    4   66
+RTX 5060 TI     0.955  0.771  0.853   64    3   19   32
+RTX 5070        0.494  0.816  0.615   40   41    9   46
+RTX 5070 TI     0.897  0.897  0.897   61    7    7   50
+RTX 5080        0.917  0.835  0.874   66    6   13   35
+RTX 5090        0.897  0.946  0.921   35    4    2   45
+RX 9070         0.316  0.862  0.463   25   54    4   37
+RX 9070 XT      1.000  0.808  0.894   59    0   14   29
+-- top 10 of 115 false positives (cheapest first)
+  [RTX 5060 TI]   729.90  wrong_model    accepted                           ASUS GeForce RTX 5060 LP BRK 8GB GDDR7 OC Edition Graphics Card
+  [RX 9070]   799.99  wrong_model    accepted                           SAPPHIRE PULSE Radeon RX 9070 GRE Graphics Graphics Card 11354-01-20G
+  [RX 9070]   901.43  wrong_model    accepted                           Sapphire Pulse AMD Radeon™ RX 9070 GRE Gaming OC Graphics Card with 12GB GDDR6, AMD RDNA 4
+  [RX 9070]   929.99  wrong_model    accepted                           GIGABYTE Gaming Radeon RX 9070 GRE 12GB GDDR6 PCI Express 5.0 ATX Graphics Card GV-R907GREGAMING OC-12GD
+  [RX 9070]   929.99  wrong_model    accepted                           Gigabyte Radeon RX 9070 GRE Gaming OC 12G - Graphics Card, 12GB GDDR6, 192bit, PCI-E 5.0, 2920 MHz Core Clock,
+  [RX 9070]  1039.99  wrong_model    accepted                           GIGABYTE Gaming Radeon RX 9070 GRE Graphics Card GV-R907GREGAMING OC-12GD
+  [RX 9070]  1049.88  wrong_model    accepted                           PowerColor Hellhound AMD Radeon RX 9070 XT 16GB
+  [RX 9070]  1069.00  wrong_model    accepted                           ASROCK  Radeon RX 9070 XT Taichi  16GB  RX9070XT TC 16GO
+  [RX 9070]  1109.99  wrong_model    accepted                           ASUS Prime Radeon RX 9070 GRE EVO OC Edition 12GB GDDR6 Graphics Card - PRIME-RX9070GRE-O12G-EVO
+  [RX 9070]  1109.99  wrong_model    accepted                           ASUS ROG Astral Radeon RX 9070 GRE 12GB GDDR6 PCI Express 5.0 ATX Graphics Card PRIME-RX9070GRE-O12G-EVO
+-- top 10 of 72 false negatives (cheapest first)
+  [ARC B580]   479.99  correct        query words missing                ASRock America VG-B580CL 12GO 12GB OC Graphics Card
+  [RTX 5060 TI]   739.99  correct        junk / no gpu keyword / under $200 MSI GeForce RTX 5060 Ti 8G VENTUS 2X PLUS GDDR7 Double Fans
+  [RTX 5060 TI]   740.99  correct        junk / no gpu keyword / under $200 ASUS Prime GeForce RTX 5060 Ti 8GB GDDR7 Triple Fans(Open Box)
+  [RTX 5060 TI]   740.99  correct        query words missing                GIGABYTE GV-N506TEAGLE OC-8GD GDDR7 Double Fans(Open Box)
+  [RTX 5060 TI]   779.99  correct        junk / no gpu keyword / under $200 ASUS Prime GeForce RTX 5060 Ti 8GB GDDR7 Triple Fans
+  [RTX 5060 TI]   789.99  correct        junk / no gpu keyword / under $200 MSI GeForce RTX 5060 Ti 8G GAMING TRIO OC GDDR7 Triple Fans
+  [RTX 5060 TI]   807.49  correct        junk / no gpu keyword / under $200 ASUS Prime GeForce RTX 5060 Ti 8GB OC GDDR7 Triple Fans(Open Box)
+  [RTX 5060 TI]   809.99  correct        query words missing                GIGABYTE GV-N506TAERO OC-8GD GDDR7 Triple Fans
+  [RX 9070]   849.99  correct        junk / no gpu keyword / under $200 XFX Swift AMD Radeon RX 9070 White Triple Fan Gaming Edition with 16GB GDDR6
+  [RTX 5060 TI]   889.56  correct        junk / no gpu keyword / under $200 PNY NVIDIA GeForce RTX™ 5060 Ti 8G Epic-X RGB™ OC Triple-Fan Graphics Card
+
+== v2 matcher ==
+overall  P 0.998  R 0.981  F1 0.989  TP 418  FP 1  FN 8  TN 454
+query               P      R     F1   TP   FP   FN   TN
+ARC B580        1.000  1.000  1.000    8    0    0   66
+RTX 5060 TI     1.000  0.976  0.988   81    0    2   35
+RTX 5070        1.000  1.000  1.000   49    0    0   87
+RTX 5070 TI     0.986  1.000  0.993   68    1    0   56
+RTX 5080        1.000  1.000  1.000   79    0    0   41
+RTX 5090        1.000  0.838  0.912   31    0    6   49
+RX 9070         1.000  1.000  1.000   29    0    0   91
+RX 9070 XT      1.000  1.000  1.000   73    0    0   29
+-- top 1 of 1 false positives (cheapest first)
+  [RTX 5070 TI]  3935.94  accessory      match                              CyberGeek GeForce RTX 5070 Ti Overclocked Triple Fan Graphics Card, 16GB GDDR7, 1406 AI Tops, DLSS 4, AI Conte
+-- top 8 of 8 false negatives (cheapest first)
+  [RTX 5060 TI]  1262.55  correct        accessory                          GIGABYTE AORUS RTX 5060 Ti AI BOX 16G Graphics Card,(Open Box)
+  [RTX 5060 TI]  1279.99  correct        accessory                          GIGABYTE AORUS GeForce RTX 5060 Ti Graphics card AORUS RTX 5060 TI AI BOX
+  [RTX 5090]  9287.99  correct        wrong model: RTX 5090 D V2         Colorful IGame RTX 5090 D v2 Advanced OC 24GB PCIE 5.0 GPU Graphics Card
+  [RTX 5090]  9999.99  correct        wrong model: RTX 5090 D V2         ASUS ROG Astral BTF GeForce RTX 5090 24GB GDDR7 BTF OC Edition Graphics Card,  ROG-ASTRAL-RTX5090DV2-O24G-BTF,
+  [RTX 5090] 10003.90  correct        accessory                          Gigabyte AORUS RTX 5090 AI BOX GV-N5090IXEB-32GD GDDR7 28Gbps Thunderbolt GV-N5090IXEB-32GD
+  [RTX 5090] 10997.00  correct        accessory                          GIGABYTE AORUS RTX 5090 AI Box Graphics Card - 32GB GDDR7, 512Bit, PCI-E 5.0, 2407MHz Core Clock, 3X DP 2.1, 1
+  [RTX 5090] 13999.99  correct        accessory                          GIGABYTE AORUS GeForce RTX 5090 Graphics Card AORUS RTX 5090 AI BOX
+  [RTX 5090]    n/a  correct        accessory                          GIGABYTE AORUS RTX 5090 AI Box Graphics Card, WATERFORCE All-in-one Cooling System, Thunderbolt 5, USB-4, GV-N
+
+pre-registered targets (v2): all met

@@ -1,0 +1,325 @@
+{
+ "_note": "canadacomputers.com /en/search?s=rtx+5070&t=1&page=1&ajax=true&onlyproducts=1&order=product.price.asc captured 2026-10-12, products trimmed to the keys the adapter reads",
+ "pagination": {
+  "total_items": 170,
+  "items_shown_from": 1,
+  "items_shown_to": 12,
+  "current_page": 1,
+  "pages_count": 15,
+  "should_be_displayed": true
+ },
+ "products": [
+  {
+   "id": 280476,
+   "id_category_default": 2337,
+   "category_name": "Liquid Cooling Water Blocks",
+   "name": "Bykski Full Coverage GPU Water Block and Backplate For ASUS RTX 5070",
+   "price_amount": 179.99,
+   "regular_price_amount": 179.99,
+   "url": "https://www.canadacomputers.com/en/liquid-cooling-water-blocks/280476/bykski-full-coverage-gpu-water-block-and-backplate-for-asus-rtx-5070-n-as5070pm-x.html",
+   "reference": "COBYK00013",
+   "mpn": "N-AS5070PM-X",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "cc_info": {
+    "classify": "I",
+    "item_code": "COBYK00013"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online": false,
+    "retail_availability": "In Store - Sold Out",
+    "retail": false
+   }
+  },
+  {
+   "id": 286318,
+   "id_category_default": 917,
+   "category_name": "Powered By Nvidia",
+   "name": "MSI GeForce RTX 5070 12G World of Warcraft MIDNIGHT LIGHT EDITION",
+   "price_amount": 1124.99,
+   "regular_price_amount": 1124.99,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/286318/msi-geforce-rtx-5070-12g-world-of-warcraft-midnight-light-edition-rtx-5070-12g-world-of-warcraft-midnight.html",
+   "reference": "VCMSI00518",
+   "mpn": "RTX 5070 12G World of Warcraft MIDNIGHT",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "cc_info": {
+    "classify": "I",
+    "item_code": "VCMSI00518"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online": false,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail": true
+   }
+  },
+  {
+   "id": 271634,
+   "id_category_default": 917,
+   "category_name": "Powered By Nvidia",
+   "name": "GIGABYTE GeForce RTX 5070 WINDFORCE OC SFF 12G Graphics Card(Open Box)",
+   "price_amount": 1196.05,
+   "regular_price_amount": 1196.05,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/271634/gigabyte-geforce-rtx-5070-windforce-oc-sff-12g-graphics-card-gv-n5070wf3oc-12gd.html",
+   "reference": "VCGIG00598OB",
+   "mpn": "GV-N5070WF3OC-12GD",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "cc_info": {
+    "classify": "OB",
+    "item_code": "VCGIG00598OB"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online": false,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail": true
+   }
+  },
+  {
+   "id": 271001,
+   "id_category_default": 917,
+   "category_name": "Powered By Nvidia",
+   "name": "MSI G5070-12S2C GDDR7 Double Fans(Open Box)",
+   "price_amount": 1196.99,
+   "regular_price_amount": 1196.99,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/271001/msi-g5070-12s2c-gddr7-double-fans-rtx-5070-12g-shadow-2x-oc.html",
+   "reference": "VCMSI00477OB",
+   "mpn": "RTX 5070 12G SHADOW 2X OC",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "cc_info": {
+    "classify": "OB",
+    "item_code": "VCMSI00477OB"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online": false,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail": true
+   }
+  },
+  {
+   "id": 272811,
+   "id_category_default": 917,
+   "category_name": "Powered By Nvidia",
+   "name": "GIGABYTE GeForce RTX 5070 GAMING OC 12G Graphics Card(Open Box)",
+   "price_amount": 1234.05,
+   "regular_price_amount": 1234.05,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/272811/gigabyte-geforce-rtx-5070-gaming-oc-12g-graphics-card-gv-n5070gaming-oc-12gd.html",
+   "reference": "VCGIG00595OB",
+   "mpn": "GV-N5070GAMING OC-12GD",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "cc_info": {
+    "classify": "OB",
+    "item_code": "VCGIG00595OB"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online": false,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail": true
+   }
+  },
+  {
+   "id": 271337,
+   "id_category_default": 917,
+   "category_name": "Powered By Nvidia",
+   "name": "ASUS Prime GeForce RTX 5070 12GB GDDR7 Graphics Card(Open Box)",
+   "price_amount": 1234.99,
+   "regular_price_amount": 1234.99,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/271337/asus-prime-geforce-rtx-5070-12gb-gddr7-graphics-card-prime-rtx5070-12g.html",
+   "reference": "VCASU00607OB",
+   "mpn": "PRIME-RTX5070-12G",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "cc_info": {
+    "classify": "OB",
+    "item_code": "VCASU00607OB"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online": false,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail": true
+   }
+  },
+  {
+   "id": 270524,
+   "id_category_default": 917,
+   "category_name": "Powered By Nvidia",
+   "name": "Prime GeForce RTX 5070 OC Edition 12GB GDDR7(Open Box)",
+   "price_amount": 1234.99,
+   "regular_price_amount": 1234.99,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/270524/prime-geforce-rtx-5070-oc-edition-12gb-gddr7-prime-rtx5070-o12g.html",
+   "reference": "VCASU00608OB",
+   "mpn": "PRIME-RTX5070-O12G",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "cc_info": {
+    "classify": "OB",
+    "item_code": "VCASU00608OB"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online": false,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail": true
+   }
+  },
+  {
+   "id": 268829,
+   "id_category_default": 917,
+   "category_name": "Powered By Nvidia",
+   "name": "GIGABYTE GeForce RTX 5070 WINDFORCE OC SFF 12G Graphics Card",
+   "price_amount": 1259,
+   "regular_price_amount": 1259,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/268829/gigabyte-geforce-rtx-5070-windforce-oc-sff-12g-graphics-card-gv-n5070wf3oc-12gd.html",
+   "reference": "VCGIG00598",
+   "mpn": "GV-N5070WF3OC-12GD",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "cc_info": {
+    "classify": "I",
+    "item_code": "VCGIG00598"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Available to Ship",
+    "online": true,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail": true
+   }
+  },
+  {
+   "id": 269556,
+   "id_category_default": 917,
+   "category_name": "Powered By Nvidia",
+   "name": "MSI G5070-12S2C GDDR7 Double Fans",
+   "price_amount": 1259.99,
+   "regular_price_amount": 1259.99,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/269556/msi-g5070-12s2c-gddr7-double-fans-rtx-5070-12g-shadow-2x-oc.html",
+   "reference": "VCMSI00477",
+   "mpn": "RTX 5070 12G SHADOW 2X OC",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "cc_info": {
+    "classify": "I",
+    "item_code": "VCMSI00477"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online": false,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail": true
+   }
+  },
+  {
+   "id": 271764,
+   "id_category_default": 917,
+   "category_name": "Powered By Nvidia",
+   "name": "GIGABYTE GeForce RTX 5070 EAGLE OC SFF 12G Graphics Card(Open Box)",
+   "price_amount": 1262.55,
+   "regular_price_amount": 1262.55,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/271764/gigabyte-geforce-rtx-5070-eagle-oc-sff-12g-graphics-card-gv-n5070eagle-oc-12gd.html",
+   "reference": "VCGIG00597OB",
+   "mpn": "GV-N5070EAGLE OC-12GD",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "cc_info": {
+    "classify": "OB",
+    "item_code": "VCGIG00597OB"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online": false,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail": true
+   }
+  },
+  {
+   "id": 281237,
+   "id_category_default": 917,
+   "category_name": "Powered By Nvidia",
+   "name": "ASUS Dual GeForce RTX 5070 12GB GDDR7 OC(Open Box)",
+   "price_amount": 1262.55,
+   "regular_price_amount": 1262.55,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/281237/asus-dual-geforce-rtx-5070-12gb-gddr7-oc-dual-rtx5070-o12g.html",
+   "reference": "VCASU00653OB",
+   "mpn": "DUAL-RTX5070-O12G",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "cc_info": {
+    "classify": "OB",
+    "item_code": "VCASU00653OB"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online": false,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail": true
+   }
+  },
+  {
+   "id": 271225,
+   "id_category_default": 917,
+   "category_name": "Powered By Nvidia",
+   "name": "MSI GeForce RTX 5070 VENTUS 3X OC GDDR7 Triple Fans(Open Box)",
+   "price_amount": 1263.49,
+   "regular_price_amount": 1263.49,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/271225/msi-geforce-rtx-5070-ventus-3x-oc-gddr7-triple-fans-rtx-5070-12g-ventus-3x-oc.html",
+   "reference": "VCMSI00484OB",
+   "mpn": "RTX 5070 12G VENTUS 3X OC",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "cc_info": {
+    "classify": "OB",
+    "item_code": "VCMSI00484OB"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online": false,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail": true
+   }
+  }
+ ]
+}

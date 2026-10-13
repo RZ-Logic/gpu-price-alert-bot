@@ -1,0 +1,623 @@
+{
+ "_note": "canadacomputers.com /en/search?s=rtx+5080&t=1&page=1&ajax=true&onlyproducts=1 trimmed; plus 2 rows from rx 9070 query (open box, 'Triple Fans' title that the bot's FAN junk keyword rejects)",
+ "pagination": {
+  "total_items": 80,
+  "items_shown_from": 1,
+  "items_shown_to": 12,
+  "current_page": 1,
+  "pages_count": 7
+ },
+ "products": [
+  {
+   "id": 268151,
+   "name": "ASUS PRIME GeForce RTX 5080 16GB GDDR7",
+   "price": "$2,419.99",
+   "price_amount": 2419.99,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/268151/asus-prime-geforce-rtx-5080-16gb-gddr7-prime-rtx5080-16g.html",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "seo_availability": "https://schema.org/InStock",
+   "mpn": "PRIME-RTX5080-16G",
+   "upc": "197105868410",
+   "reference": "VCASU00601",
+   "category_name": "Powered By Nvidia",
+   "manufacturer_name": "ASUS",
+   "clearance": 0,
+   "stock_availability": {
+    "online_availability": "Online - Available to Ship",
+    "online_info": "This product is available in limited quantities. Due to limited supplies we may be unable to fulfill your order. Order today and expect this item to be shipped within 2-5 business days.",
+    "online": true,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail_info": "This product is available in-stores. Please check item availability under the stock level tab.",
+    "retail": true,
+    "retail_availability_message": "In Store - Available for Pickup",
+    "online_availability_message": "Online - Available to Ship"
+   },
+   "grouped_features": {
+    "Brand": {
+     "name": "Brand",
+     "value": "ASUS",
+     "id_feature": 1614,
+     "position": 1,
+     "id_feature_value": 1614
+    },
+    "GPU": {
+     "name": "GPU",
+     "value": "GeForce RTX 5080",
+     "id_feature": 1164,
+     "position": 2,
+     "id_feature_value": 1166
+    },
+    "Memory Size": {
+     "name": "Memory Size",
+     "value": "16GB",
+     "id_feature": 1183,
+     "position": 3,
+     "id_feature_value": 2975
+    },
+    "Cooler": {
+     "name": "Cooler",
+     "value": "Triple Fans",
+     "id_feature": 5890,
+     "position": 4,
+     "id_feature_value": 5893
+    }
+   },
+   "add_to_cart": {
+    "display": true,
+    "preorder": false,
+    "member_preorder": false,
+    "backorder": false,
+    "limit_quantity": 0,
+    "special_order": 0
+   },
+   "flags": {
+    "on-sale": {
+     "type": "on-sale",
+     "label": "On sale!"
+    }
+   }
+  },
+  {
+   "id": 268141,
+   "name": "GIGABYTE GeForce RTX 5080 WINDFORCE OC SFF 16G Graphics Card",
+   "price": "$2,449.00",
+   "price_amount": 2449,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/268141/gigabyte-geforce-rtx-5080-windforce-oc-sff-16g-graphics-card-gv-n5080wf3oc-16gd.html",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "seo_availability": "https://schema.org/InStock",
+   "mpn": "GV-N5080WF3OC-16GD",
+   "upc": "889523048528",
+   "reference": "VCGIG00576",
+   "category_name": "Powered By Nvidia",
+   "manufacturer_name": "GIGABYTE",
+   "clearance": 0,
+   "stock_availability": {
+    "online_availability": "Online - Available to Ship",
+    "online_info": "This product is available in limited quantities. Due to limited supplies we may be unable to fulfill your order. Order today and expect this item to be shipped within 2-5 business days.",
+    "online": true,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail_info": "This product is available in-stores. Please check item availability under the stock level tab.",
+    "retail": true,
+    "retail_availability_message": "In Store - Available for Pickup",
+    "online_availability_message": "Online - Available to Ship"
+   },
+   "grouped_features": {
+    "Brand": {
+     "name": "Brand",
+     "value": "GIGABYTE",
+     "id_feature": 1614,
+     "position": 1,
+     "id_feature_value": 3031
+    },
+    "GPU": {
+     "name": "GPU",
+     "value": "GeForce RTX 5080",
+     "id_feature": 1164,
+     "position": 2,
+     "id_feature_value": 1166
+    },
+    "Memory Size": {
+     "name": "Memory Size",
+     "value": "16GB",
+     "id_feature": 1183,
+     "position": 3,
+     "id_feature_value": 2975
+    },
+    "Cooler": {
+     "name": "Cooler",
+     "value": "Triple Fans",
+     "id_feature": 5890,
+     "position": 4,
+     "id_feature_value": 5893
+    }
+   },
+   "add_to_cart": {
+    "display": true,
+    "preorder": false,
+    "member_preorder": false,
+    "backorder": false,
+    "limit_quantity": 0,
+    "special_order": 0
+   },
+   "flags": {
+    "on-sale": {
+     "type": "on-sale",
+     "label": "On sale!"
+    }
+   }
+  },
+  {
+   "id": 267145,
+   "name": "ASUS ROG Astral GeForce RTX 5080 16GB GDDR7 OC Edition Quad-Fan Force",
+   "price": "$2,989.99",
+   "price_amount": 2989.99,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/267145/asus-rog-astral-geforce-rtx-5080-16gb-gddr7-oc-edition-quad-fan-force-rog-astral-rtx5080-o16g-gaming.html",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "seo_availability": "https://schema.org/InStock",
+   "mpn": "ROG-ASTRAL-RTX5080-O16G-GAMING",
+   "upc": "197105868366",
+   "reference": "VCASU00593",
+   "category_name": "Powered By Nvidia",
+   "manufacturer_name": "ASUS",
+   "clearance": 0,
+   "stock_availability": {
+    "online_availability": "Online - Available to Ship",
+    "online_info": "This product is available in limited quantities. Due to limited supplies we may be unable to fulfill your order. Order today and expect this item to be shipped within 2-5 business days.",
+    "online": true,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail_info": "This product is available in-stores. Please check item availability under the stock level tab.",
+    "retail": true,
+    "retail_availability_message": "In Store - Available for Pickup",
+    "online_availability_message": "Online - Available to Ship"
+   },
+   "grouped_features": {
+    "Brand": {
+     "name": "Brand",
+     "value": "ASUS",
+     "id_feature": 1614,
+     "position": 1,
+     "id_feature_value": 1614
+    },
+    "GPU": {
+     "name": "GPU",
+     "value": "GeForce RTX 5080",
+     "id_feature": 1164,
+     "position": 2,
+     "id_feature_value": 1166
+    },
+    "Memory Size": {
+     "name": "Memory Size",
+     "value": "16GB",
+     "id_feature": 1183,
+     "position": 3,
+     "id_feature_value": 2975
+    },
+    "Cooler": {
+     "name": "Cooler",
+     "value": "Quad Fan",
+     "id_feature": 5890,
+     "position": 4,
+     "id_feature_value": 6228
+    }
+   },
+   "add_to_cart": {
+    "display": true,
+    "preorder": false,
+    "member_preorder": false,
+    "backorder": false,
+    "limit_quantity": 0,
+    "special_order": 0
+   },
+   "flags": {
+    "on-sale": {
+     "type": "on-sale",
+     "label": "On sale!"
+    }
+   }
+  },
+  {
+   "id": 267147,
+   "name": "ASUS PRIME GeForce RTX 5080 16GB GDDR7 OC Edition SFF",
+   "price": "$2,419.99",
+   "price_amount": 2419.99,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/267147/asus-prime-geforce-rtx-5080-16gb-gddr7-oc-edition-sff-prime-rtx5080-o16g.html",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "seo_availability": "https://schema.org/InStock",
+   "mpn": "PRIME-RTX5080-O16G",
+   "upc": "197105868397",
+   "reference": "VCASU00595",
+   "category_name": "Powered By Nvidia",
+   "manufacturer_name": "ASUS",
+   "clearance": 0,
+   "stock_availability": {
+    "online_availability": "Online - Available to Ship",
+    "online_info": "This product is available in limited quantities. Due to limited supplies we may be unable to fulfill your order. Order today and expect this item to be shipped within 2-5 business days.",
+    "online": true,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail_info": "This product is available in-stores. Please check item availability under the stock level tab.",
+    "retail": true,
+    "retail_availability_message": "In Store - Available for Pickup",
+    "online_availability_message": "Online - Available to Ship"
+   },
+   "grouped_features": {
+    "Brand": {
+     "name": "Brand",
+     "value": "ASUS",
+     "id_feature": 1614,
+     "position": 1,
+     "id_feature_value": 1614
+    },
+    "GPU": {
+     "name": "GPU",
+     "value": "GeForce RTX 5080",
+     "id_feature": 1164,
+     "position": 2,
+     "id_feature_value": 1166
+    },
+    "Memory Size": {
+     "name": "Memory Size",
+     "value": "16GB",
+     "id_feature": 1183,
+     "position": 3,
+     "id_feature_value": 2975
+    },
+    "Cooler": {
+     "name": "Cooler",
+     "value": "Triple Fans",
+     "id_feature": 5890,
+     "position": 4,
+     "id_feature_value": 5893
+    }
+   },
+   "add_to_cart": {
+    "display": true,
+    "preorder": false,
+    "member_preorder": false,
+    "backorder": false,
+    "limit_quantity": 0,
+    "special_order": 0
+   },
+   "flags": {
+    "on-sale": {
+     "type": "on-sale",
+     "label": "On sale!"
+    }
+   }
+  },
+  {
+   "id": 267146,
+   "name": "ASUS TUF Gaming GeForce RTX 5080 16GB GDDR7 OC Edition",
+   "price": "$2,699.99",
+   "price_amount": 2699.99,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/267146/asus-tuf-gaming-geforce-rtx-5080-16gb-gddr7-oc-edition-tuf-rtx5080-o16g-gaming.html",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "seo_availability": "https://schema.org/InStock",
+   "mpn": "TUF-RTX5080-O16G-GAMING",
+   "upc": "197105868335",
+   "reference": "VCASU00594",
+   "category_name": "Powered By Nvidia",
+   "manufacturer_name": "ASUS",
+   "clearance": 0,
+   "stock_availability": {
+    "online_availability": "Online - Available to Ship",
+    "online_info": "This product is available in limited quantities. Due to limited supplies we may be unable to fulfill your order. Order today and expect this item to be shipped within 2-5 business days.",
+    "online": true,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail_info": "This product is available in-stores. Please check item availability under the stock level tab.",
+    "retail": true,
+    "retail_availability_message": "In Store - Available for Pickup",
+    "online_availability_message": "Online - Available to Ship"
+   },
+   "grouped_features": {
+    "Brand": {
+     "name": "Brand",
+     "value": "ASUS",
+     "id_feature": 1614,
+     "position": 1,
+     "id_feature_value": 1614
+    },
+    "GPU": {
+     "name": "GPU",
+     "value": "GeForce RTX 5080",
+     "id_feature": 1164,
+     "position": 2,
+     "id_feature_value": 1166
+    },
+    "Memory Size": {
+     "name": "Memory Size",
+     "value": "16GB",
+     "id_feature": 1183,
+     "position": 3,
+     "id_feature_value": 2975
+    },
+    "Cooler": {
+     "name": "Cooler",
+     "value": "Triple Fans",
+     "id_feature": 5890,
+     "position": 4,
+     "id_feature_value": 5893
+    }
+   },
+   "add_to_cart": {
+    "display": true,
+    "preorder": false,
+    "member_preorder": false,
+    "backorder": false,
+    "limit_quantity": 0,
+    "special_order": 0
+   },
+   "flags": {
+    "on-sale": {
+     "type": "on-sale",
+     "label": "On sale!"
+    }
+   }
+  },
+  {
+   "id": 270345,
+   "name": "MSI GeForce RTX 5080 16G SHADOW 3X OC",
+   "price": "$2,509.99",
+   "price_amount": 2509.99,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/270345/msi-geforce-rtx-5080-16g-shadow-3x-oc-rtx-5080-16g-shadow-3x-oc.html",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "seo_availability": "https://schema.org/InStock",
+   "mpn": "RTX 5080 16G SHADOW 3X OC",
+   "upc": "824142395882",
+   "reference": "VCMSI00486",
+   "category_name": "Powered By Nvidia",
+   "manufacturer_name": "MSI",
+   "clearance": 0,
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online_info": "This product is available to order online but must be picked up in-store.",
+    "online": false,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail_info": "This product is available in-stores. Please check item availability under the stock level tab.",
+    "retail": true,
+    "retail_availability_message": "In Store - Available for Pickup",
+    "online_availability_message": "Online - Sold Out"
+   },
+   "grouped_features": {
+    "Brand": {
+     "name": "Brand",
+     "value": "MSI",
+     "id_feature": 1614,
+     "position": 1,
+     "id_feature_value": 3032
+    },
+    "GPU": {
+     "name": "GPU",
+     "value": "GeForce RTX 5080",
+     "id_feature": 1164,
+     "position": 2,
+     "id_feature_value": 1166
+    },
+    "Memory Size": {
+     "name": "Memory Size",
+     "value": "16GB",
+     "id_feature": 1183,
+     "position": 3,
+     "id_feature_value": 2975
+    },
+    "Cooler": {
+     "name": "Cooler",
+     "value": "Triple Fans",
+     "id_feature": 5890,
+     "position": 4,
+     "id_feature_value": 5893
+    }
+   },
+   "add_to_cart": {
+    "display": true,
+    "preorder": false,
+    "member_preorder": false,
+    "backorder": false,
+    "limit_quantity": 0,
+    "special_order": 0
+   },
+   "flags": {
+    "on-sale": {
+     "type": "on-sale",
+     "label": "On sale!"
+    }
+   }
+  },
+  {
+   "id": 290799,
+   "name": "ARMOURY AMD Ryzen 7 8700F Radeon RX 9070 32GB RAM 1TB SSD W11H(Open Box)",
+   "price": "$2,374.05",
+   "price_amount": 2374.05,
+   "url": "https://www.canadacomputers.com/en/armoury-gaming-desktops/290799/armoury-amd-ryzen-7-8700f-radeon-rx-9070-32gb-ram-1tb-ssd-w11h-rtaru00305.html",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "seo_availability": "https://schema.org/InStock",
+   "mpn": "RTARU00305",
+   "upc": "827676036283",
+   "reference": "RTARU00305OB",
+   "category_name": "Armoury Gaming Desktops",
+   "manufacturer_name": "ARMOURY",
+   "clearance": 0,
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online_info": "This product is available to order online but must be picked up in-store.",
+    "online": false,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail_info": "This product is available in-stores. Please check item availability under the stock level tab.",
+    "retail": true,
+    "retail_availability_message": "In Store - Available for Pickup",
+    "online_availability_message": "Online - Sold Out"
+   },
+   "grouped_features": {
+    "Desktop Type": {
+     "name": "Desktop Type",
+     "value": "Gaming",
+     "id_feature": 3428,
+     "position": 2,
+     "id_feature_value": 3428
+    },
+    "Form Factor": {
+     "name": "Form Factor",
+     "value": "Mid Tower",
+     "id_feature": 3432,
+     "position": 3,
+     "id_feature_value": 3434
+    },
+    "CPU": {
+     "name": "CPU",
+     "value": "AMD Ryzen 7",
+     "id_feature": 3437,
+     "position": 4,
+     "id_feature_value": 3442
+    },
+    "Memory": {
+     "name": "Memory",
+     "value": "32GB",
+     "id_feature": 3448,
+     "position": 5,
+     "id_feature_value": 3452
+    },
+    "SSD Capacity": {
+     "name": "SSD Capacity",
+     "value": "1TB",
+     "id_feature": 3461,
+     "position": 6,
+     "id_feature_value": 3466
+    },
+    "Operating System": {
+     "name": "Operating System",
+     "value": "Windows 11 Home",
+     "id_feature": 3524,
+     "position": 9,
+     "id_feature_value": 3524
+    },
+    "Wi-Fi": {
+     "name": "Wi-Fi",
+     "value": "Yes",
+     "id_feature": 5726,
+     "position": 10,
+     "id_feature_value": 5726
+    }
+   },
+   "add_to_cart": {
+    "display": true,
+    "preorder": false,
+    "member_preorder": false,
+    "backorder": false,
+    "limit_quantity": 1,
+    "special_order": 0,
+    "info": "Limit 1 per customer, while quantities last."
+   },
+   "flags": {
+    "on-sale": {
+     "type": "on-sale",
+     "label": "On sale!"
+    },
+    "discount": {
+     "type": "discount",
+     "label": "-$475.00"
+    }
+   }
+  },
+  {
+   "id": 267624,
+   "name": "GIGABYTE Radeon RX 9070 XT GAMING OC GDDR6 Triple Fans",
+   "price": "$1,499.00",
+   "price_amount": 1499,
+   "url": "https://www.canadacomputers.com/en/powered-by-amd/267624/gigabyte-radeon-rx-9070-xt-gaming-oc-gddr6-triple-fans-gv-r9070xtgaming-oc-16gd.html",
+   "condition": {
+    "type": "new",
+    "label": "New",
+    "schema_url": "https://schema.org/NewCondition"
+   },
+   "seo_availability": "https://schema.org/InStock",
+   "mpn": "GV-R9070XTGAMING OC-16GD",
+   "upc": "889523047569",
+   "reference": "VCGIG00568",
+   "category_name": "Powered By AMD",
+   "manufacturer_name": "GIGABYTE",
+   "clearance": 0,
+   "stock_availability": {
+    "online_availability": "Online - Available to Ship",
+    "online_info": "This product is available in limited quantities. Due to limited supplies we may be unable to fulfill your order. Order today and expect this item to be shipped within 2-5 business days.",
+    "online": true,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail_info": "This product is available in-stores. Please check item availability under the stock level tab.",
+    "retail": true,
+    "retail_availability_message": "In Store - Available for Pickup",
+    "online_availability_message": "Online - Available to Ship"
+   },
+   "grouped_features": {
+    "Brand": {
+     "name": "Brand",
+     "value": "GIGABYTE",
+     "id_feature": 1614,
+     "position": 1,
+     "id_feature_value": 3031
+    },
+    "GPU": {
+     "name": "GPU",
+     "value": "Radeon RX 9070 XT",
+     "id_feature": 1164,
+     "position": 2,
+     "id_feature_value": 4430
+    },
+    "Memory Size": {
+     "name": "Memory Size",
+     "value": "16GB",
+     "id_feature": 1183,
+     "position": 3,
+     "id_feature_value": 2975
+    },
+    "Cooler": {
+     "name": "Cooler",
+     "value": "Triple Fans",
+     "id_feature": 5890,
+     "position": 4,
+     "id_feature_value": 5893
+    }
+   },
+   "add_to_cart": {
+    "display": true,
+    "preorder": false,
+    "member_preorder": false,
+    "backorder": false,
+    "limit_quantity": 1,
+    "special_order": 0,
+    "info": "Limit 1 per customer, while quantities last."
+   },
+   "flags": {
+    "on-sale": {
+     "type": "on-sale",
+     "label": "On sale!"
+    }
+   }
+  }
+ ]
+}

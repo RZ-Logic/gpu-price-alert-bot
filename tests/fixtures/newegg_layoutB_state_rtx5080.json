@@ -1,0 +1,432 @@
+{
+ "_note": "newegg.ca /p/pl?d=rtx+5080&N=4131 layout B (goods-container). window.__initialState__.Products[], trimmed",
+ "TotalItemCount": 196,
+ "Products": [
+  {
+   "ItemCell": {
+    "Item": "14-126-744",
+    "UnitCost": 2369.99,
+    "FinalPrice": 2369.99,
+    "Instock": true,
+    "Description": {
+     "Title": "ASUS PRIME GeForce RTX 5080 16GB GDDR7 OC Edition PRIME-RTX5080-O16G PCI-Express 5.0 DLSS 4.0 Graphics Card",
+     "IMDescription": "VGA ASUS|PRIME-RTX5080-O16G R",
+     "BulletDescription": "16GB 256-Bit GDDR7 \r\n1 x HDMI 2.1b 3 x DisplayPort 2.1a \r\n10752 CUDA Cores \r\nPCI Express 5.0 x16",
+     "LineDescription": "ASUS PRIME GeForce RTX 5080 16GB GDDR7 OC Edition PRIME-RTX5080-O16G PCI-Express 5.0 DLSS 4.0 Graphics Card",
+     "WebDescription": "ASUS PRIME GeForce RTX 5080 16GB GDDR7 OC Edition PRIME-RTX5080-O16G PCI-Express 5.0 DLSS 4.0 Graphics Card",
+     "LongDescription": null,
+     "UrlKeywords": "asus-prime-rtx5080-o16g-geforce-rtx-5080-16gb-graphics-card",
+     "ShortTitle": "ASUS PRIME GeForce RTX 5080 16GB GDDR7 OC Edition PRIME-RTX5080-O16G PCI-Express 5.0 DLSS 4.0 Graphics Card",
+     "WHIDescription": null,
+     "ProductName": "ASUS PRIME GeForce RTX 5080 OC Edition 16GB",
+     "ManualProductName": "ASUS PRIME GeForce RTX 5080 16GB",
+     "SimplifiedWebDescription": "",
+     "SimplifiedLineDescription": "ASUS PRIME GeForce RTX 5080 16GB OC Edition Graphics Card PCI-Express 5.0 DLSS 4.0",
+     "SimplifiedBulletinDescription": ""
+    },
+    "Seller": {
+     "SellerId": "",
+     "SellerName": null,
+     "SellerLogoURL": null,
+     "SellerRating": null,
+     "SellerRatingOneDecimal": null,
+     "SellerReviewCount": null,
+     "SellerUrlKey": null,
+     "SellerModel": null,
+     "TopRated": false,
+     "LifetimeOrderCount": 0,
+     "SellerRatingLast12M": null,
+     "SellerRatingOneDecimalLast12M": null,
+     "SellerReviewCountLast12M": null,
+     "Anchor": false,
+     "IsHotSeller": false
+    },
+    "Model": "PRIME-RTX5080-O16G",
+    "ItemManufactory": {
+     "BrandId": 1315,
+     "Code": 0,
+     "Manufactory": "ASUS",
+     "CountryOfMfr": null,
+     "ManfactoryLogo": 1,
+     "ManufactoryWeb": null,
+     "Hyperlink": null,
+     "CustomerServicePhone": null,
+     "IsM2C": false,
+     "IsTopTierBrand": true,
+     "ManufacturerCodes": null
+    },
+    "Subcategory": {
+     "SubcategoryId": 48,
+     "PatchCount": 0,
+     "SubcategoryDescription": "GPUs / Video Graphics Cards",
+     "RealSubCategoryId": 48,
+     "RealSubCategoryDescription": "Video Card - Nvidia"
+    },
+    "Type": 0,
+    "ItemPriceRange": {
+     "PriceRangeMin": 2369.99,
+     "PriceRangeMax": 3599
+    },
+    "LowestPrice30Days": 2346.29
+   },
+   "GroupItemCount": 23,
+   "RefurbishItemCount": 0,
+   "UsedItemCount": 0
+  },
+  {
+   "ItemCell": {
+    "Item": "14-932-754",
+    "UnitCost": 2449.99,
+    "FinalPrice": 2449.99,
+    "Instock": true,
+    "Description": {
+     "Title": "GIGABYTE WINDFORCE GeForce RTX 5080 Graphics Card GV-N5080WF3OC-16GD",
+     "IMDescription": "VGA GB|GV-N5080WF3OC-16GD 5080 R",
+     "BulletDescription": "16GB 256-Bit GDDR7 \r\nCore Clock 2670 MHz \r\n1 x HDMI 2.1b 3 x DisplayPort 2.1b \r\n10752 CUDA Cores \r\nPCI Express 5.0 x16",
+     "LineDescription": "GIGABYTE WINDFORCE GeForce RTX 5080 16GB GDDR7 PCI Express 5.0 Graphics Card GV-N5080WF3OC-16GD",
+     "WebDescription": "GIGABYTE WINDFORCE GeForce RTX 5080 16GB GDDR7 PCI Express 5.0 Graphics Card GV-N5080WF3OC-16GD",
+     "LongDescription": null,
+     "UrlKeywords": "gigabyte-windforce-gv-n5080wf3oc-16gd-geforce-rtx-5080-16gb-graphics-card-triple-fans",
+     "ShortTitle": "GIGABYTE GV-N5080WF3OC-16GD WINDFORCE GeForce RTX 5080 Graphics Card",
+     "WHIDescription": null,
+     "ProductName": "GIGABYTE WINDFORCE GeForce RTX 5080 16GB",
+     "ManualProductName": "GIGABYTE WINDFORCE GeForce RTX 5080 16GB",
+     "SimplifiedWebDescription": "",
+     "SimplifiedLineDescription": "GIGABYTE GeForce RTX 5080 16GB GDDR7 PCI Express 5.0 Graphics Card",
+     "SimplifiedBulletinDescription": ""
+    },
+    "Seller": {
+     "SellerId": "",
+     "SellerName": null,
+     "SellerLogoURL": null,
+     "SellerRating": null,
+     "SellerRatingOneDecimal": null,
+     "SellerReviewCount": null,
+     "SellerUrlKey": null,
+     "SellerModel": null,
+     "TopRated": false,
+     "LifetimeOrderCount": 0,
+     "SellerRatingLast12M": null,
+     "SellerRatingOneDecimalLast12M": null,
+     "SellerReviewCountLast12M": null,
+     "Anchor": false,
+     "IsHotSeller": false
+    },
+    "Model": "GV-N5080WF3OC-16GD",
+    "ItemManufactory": {
+     "BrandId": 1314,
+     "Code": 0,
+     "Manufactory": "GIGABYTE",
+     "CountryOfMfr": "USA",
+     "ManfactoryLogo": 1,
+     "ManufactoryWeb": null,
+     "Hyperlink": null,
+     "CustomerServicePhone": null,
+     "IsM2C": false,
+     "IsTopTierBrand": true,
+     "ManufacturerCodes": null
+    },
+    "Subcategory": {
+     "SubcategoryId": 48,
+     "PatchCount": 0,
+     "SubcategoryDescription": "GPUs / Video Graphics Cards",
+     "RealSubCategoryId": 48,
+     "RealSubCategoryDescription": "Video Card - Nvidia"
+    },
+    "Type": 0,
+    "ItemPriceRange": {
+     "PriceRangeMin": 2449.99,
+     "PriceRangeMax": 4199.99
+    },
+    "LowestPrice30Days": 2229.99
+   },
+   "GroupItemCount": 26,
+   "RefurbishItemCount": 0,
+   "UsedItemCount": 0
+  },
+  {
+   "ItemCell": {
+    "Item": "9SIC3DSKNH4195",
+    "UnitCost": 3390,
+    "FinalPrice": 3390,
+    "Instock": true,
+    "Description": {
+     "Title": "ASUS PRIME GeForce RTX 5080 16GB 256-Bit GDDR7 PCI-Express 5.0 DLSS 4.0 Graphics Card PRIME-RTX5080-16G",
+     "IMDescription": "VGA ASUS|PRIME-RTX5080-16G R",
+     "BulletDescription": "16GB 256-Bit GDDR7 \r\n1 x HDMI 2.1b 3 x DisplayPort 2.1a \r\n10752 CUDA Cores \r\nPCI Express 5.0 x16",
+     "LineDescription": "ASUS PRIME GeForce RTX 5080 16GB 256-Bit GDDR7 PCI-Express 5.0 DLSS 4.0 Graphics Card PRIME-RTX5080-16G",
+     "WebDescription": "ASUS PRIME GeForce RTX 5080 16GB 256-Bit GDDR7 PCI-Express 5.0 DLSS 4.0 Graphics Card PRIME-RTX5080-16G",
+     "LongDescription": null,
+     "UrlKeywords": "asus-prime-rtx5080-16g-geforce-rtx-5080-16gb-graphics-card",
+     "ShortTitle": "ASUS PRIME GeForce RTX 5080 16GB 256-Bit GDDR7 PCI-Express 5.0 DLSS 4.0 Graphics Card PRIME-RTX5080-16G",
+     "WHIDescription": null,
+     "ProductName": "ASUS PRIME GeForce RTX 5080 16GB",
+     "ManualProductName": "ASUS PRIME GeForce RTX 5080 16GB",
+     "SimplifiedWebDescription": null,
+     "SimplifiedLineDescription": null,
+     "SimplifiedBulletinDescription": null
+    },
+    "Seller": {
+     "SellerId": "C3DS",
+     "SellerName": "Speed Electronics",
+     "SellerLogoURL": "Seller_C3DS_7b003012-3239-448b-b3c0-25896e6dc194.png",
+     "SellerRating": 5,
+     "SellerRatingOneDecimal": 5,
+     "SellerReviewCount": 2,
+     "SellerUrlKey": "Speed-Electronics",
+     "SellerModel": "PSP",
+     "TopRated": false,
+     "LifetimeOrderCount": 0,
+     "SellerRatingLast12M": 5,
+     "SellerRatingOneDecimalLast12M": 5,
+     "SellerReviewCountLast12M": 2,
+     "Anchor": false,
+     "IsHotSeller": false
+    },
+    "Model": "PRIME-RTX5080-16G",
+    "ItemManufactory": {
+     "BrandId": 1315,
+     "Code": 0,
+     "Manufactory": "ASUS",
+     "CountryOfMfr": null,
+     "ManfactoryLogo": 1,
+     "ManufactoryWeb": null,
+     "Hyperlink": null,
+     "CustomerServicePhone": null,
+     "IsM2C": false,
+     "IsTopTierBrand": true,
+     "ManufacturerCodes": null
+    },
+    "Subcategory": {
+     "SubcategoryId": 48,
+     "PatchCount": 0,
+     "SubcategoryDescription": "GPUs / Video Graphics Cards",
+     "RealSubCategoryId": 48,
+     "RealSubCategoryDescription": "Video Card - Nvidia"
+    },
+    "Type": 0,
+    "ItemPriceRange": {
+     "PriceRangeMin": 2419.99,
+     "PriceRangeMax": 3390
+    },
+    "LowestPrice30Days": 0
+   },
+   "GroupItemCount": 23,
+   "RefurbishItemCount": 0,
+   "UsedItemCount": 0
+  },
+  {
+   "ItemCell": {
+    "Item": "9SIA9H5KXX5112",
+    "UnitCost": 2849.99,
+    "FinalPrice": 2849.99,
+    "Instock": true,
+    "Description": {
+     "Title": "MSI Gaming GeForce RTX 5080 Graphics Card RTX 5080 16G GAMING TRIO OC",
+     "IMDescription": "VGA MSI|RTX 5080 16G GAMING TRIO OC R",
+     "BulletDescription": "16GB 256-Bit GDDR7 \r\n1 x HDMI 2.1b 3 x DisplayPort 2.1a \r\n10752 CUDA Cores \r\nPCI Express 5.0",
+     "LineDescription": "MSI Gaming GeForce RTX 5080 16GB GDDR7 PCI Express 5.0 Graphics Card RTX 5080 16G GAMING TRIO OC",
+     "WebDescription": "MSI Gaming GeForce RTX 5080 16GB GDDR7 PCI Express 5.0 Graphics Card RTX 5080 16G GAMING TRIO OC",
+     "LongDescription": null,
+     "UrlKeywords": "msi-rtx-5080-16g-gaming-trio-oc-geforce-rtx-5080-16gb-graphics-card",
+     "ShortTitle": "MSI RTX 5080 16G GAMING TRIO OC Gaming GeForce RTX 5080 Graphics Card",
+     "WHIDescription": null,
+     "ProductName": "MSI Gaming GeForce RTX 5080 16GB",
+     "ManualProductName": "MSI Gaming GeForce RTX 5080 16GB",
+     "SimplifiedWebDescription": null,
+     "SimplifiedLineDescription": null,
+     "SimplifiedBulletinDescription": null
+    },
+    "Seller": {
+     "SellerId": "A9H5",
+     "SellerName": "Aero Malls Inc.",
+     "SellerLogoURL": "Seller_A9H5_d3412b6e-192d-4835-b6b8-5569ed074657.gif",
+     "SellerRating": 5,
+     "SellerRatingOneDecimal": 4.7,
+     "SellerReviewCount": 5519,
+     "SellerUrlKey": "Aero-Malls-Inc",
+     "SellerModel": "PSP",
+     "TopRated": true,
+     "LifetimeOrderCount": 0,
+     "SellerRatingLast12M": 5,
+     "SellerRatingOneDecimalLast12M": 4.8,
+     "SellerReviewCountLast12M": 29,
+     "Anchor": true,
+     "IsHotSeller": false
+    },
+    "Model": "RTX 5080 16G GAMING TRIO OC",
+    "ItemManufactory": {
+     "BrandId": 1312,
+     "Code": 0,
+     "Manufactory": "MSI",
+     "CountryOfMfr": null,
+     "ManfactoryLogo": 1,
+     "ManufactoryWeb": null,
+     "Hyperlink": null,
+     "CustomerServicePhone": null,
+     "IsM2C": false,
+     "IsTopTierBrand": true,
+     "ManufacturerCodes": null
+    },
+    "Subcategory": {
+     "SubcategoryId": 48,
+     "PatchCount": 0,
+     "SubcategoryDescription": "GPUs / Video Graphics Cards",
+     "RealSubCategoryId": 48,
+     "RealSubCategoryDescription": "Video Card - Nvidia"
+    },
+    "Type": 0,
+    "ItemPriceRange": {
+     "PriceRangeMin": 2749.99,
+     "PriceRangeMax": 4599.99
+    },
+    "LowestPrice30Days": 0
+   },
+   "GroupItemCount": 53,
+   "RefurbishItemCount": 0,
+   "UsedItemCount": 0
+  },
+  {
+   "ItemCell": {
+    "Item": "9SIA7BBM4X2309",
+    "UnitCost": 9036.35,
+    "FinalPrice": 9036.35,
+    "Instock": true,
+    "Description": {
+     "Title": "ASUS TUF Gaming GeForce RTX 5090 32GB GDDR7 TUF-RTX5090-32G-GAMING PCI-Express 5.0 DLSS 4.0 Graphics Card",
+     "IMDescription": "VGA ASUS|TUF-RTX5090-32G-GAMING R",
+     "BulletDescription": "512-Bit GDDR7 \r\nPCI Express 4.0 x16\r\nRTX 5090 Blackwell GPU\r\nDLSS 4.0",
+     "LineDescription": "ASUS TUF Gaming GeForce RTX 5090 GDDR7 PCI Express 4.0 x16 Graphics Card TUF-RTX5090-32G-GAMING",
+     "WebDescription": "ASUS TUF Gaming GeForce RTX 5090 32GB GDDR7 TUF-RTX5090-32G-GAMING PCI-Express 5.0 DLSS 4.0 Graphics Card",
+     "LongDescription": null,
+     "UrlKeywords": "asus-tuf-gaming-tuf-rtx5090-32g-gaming-geforce-rtx-5090-32gb-graphics-card-triple-fans",
+     "ShortTitle": "ASUS TUF Gaming GeForce RTX 5090 32GB GDDR7 TUF-RTX5090-32G-GAMING PCI-Express 5.0 DLSS 4.0 Graphics Card",
+     "WHIDescription": null,
+     "ProductName": "ASUS TUF Gaming GeForce RTX 5090 32GB",
+     "ManualProductName": "ASUS TUF Gaming GeForce RTX 5090 32GB",
+     "SimplifiedWebDescription": null,
+     "SimplifiedLineDescription": null,
+     "SimplifiedBulletinDescription": null
+    },
+    "Seller": {
+     "SellerId": "A7BB",
+     "SellerName": "OneDealOutlet Canada",
+     "SellerLogoURL": "Seller_A7BB_f1f9ef20-2206-4c04-a80c-c8a1f24b2c5e.gif",
+     "SellerRating": 4,
+     "SellerRatingOneDecimal": 4.3,
+     "SellerReviewCount": 3159,
+     "SellerUrlKey": "OneDealOutlet-Canada",
+     "SellerModel": "PSP",
+     "TopRated": true,
+     "LifetimeOrderCount": 0,
+     "SellerRatingLast12M": 4,
+     "SellerRatingOneDecimalLast12M": 4.3,
+     "SellerReviewCountLast12M": 33,
+     "Anchor": true,
+     "IsHotSeller": false
+    },
+    "Model": "TUF-RTX5090-32G-GAMING",
+    "ItemManufactory": {
+     "BrandId": 1315,
+     "Code": 0,
+     "Manufactory": "ASUS",
+     "CountryOfMfr": null,
+     "ManfactoryLogo": 1,
+     "ManufactoryWeb": null,
+     "Hyperlink": null,
+     "CustomerServicePhone": null,
+     "IsM2C": false,
+     "IsTopTierBrand": true,
+     "ManufacturerCodes": null
+    },
+    "Subcategory": {
+     "SubcategoryId": 48,
+     "PatchCount": 0,
+     "SubcategoryDescription": "GPUs / Video Graphics Cards",
+     "RealSubCategoryId": 48,
+     "RealSubCategoryDescription": "Video Card - Nvidia"
+    },
+    "Type": 0,
+    "ItemPriceRange": {
+     "PriceRangeMin": 9036.35,
+     "PriceRangeMax": 9999.99
+    },
+    "LowestPrice30Days": 8783
+   },
+   "GroupItemCount": 12,
+   "RefurbishItemCount": 0,
+   "UsedItemCount": 0
+  },
+  {
+   "ItemCell": {
+    "Item": "9SIBP4ZM167176",
+    "UnitCost": 12998,
+    "FinalPrice": 12998,
+    "Instock": true,
+    "Description": {
+     "Title": "MSI Ventus GeForce RTX 5090 Graphics Card RTX 5090 32G VENTUS 3X",
+     "IMDescription": "VGA MSI|RTX 5090 32G VENTUS 3X R",
+     "BulletDescription": "32GB 512-Bit GDDR7 \r\nBoost Clock 2407 MHz \r\n1 x HDMI 2.1b 3 x DisplayPort 2.1b \r\n21760 CUDA Cores \r\nPCI Express 5.0",
+     "LineDescription": "MSI Ventus GeForce RTX 5090 32GB GDDR7 PCI Express 5.0 Graphics Card RTX 5090 32G VENTUS 3X",
+     "WebDescription": "MSI Ventus GeForce RTX 5090 32GB GDDR7 PCI Express 5.0 Graphics Card RTX 5090 32G VENTUS 3X",
+     "LongDescription": null,
+     "UrlKeywords": "msi-rtx-5090-32g-ventus-3x-geforce-rtx-5090-32gb-graphics-card",
+     "ShortTitle": "MSI RTX 5090 32G VENTUS 3X Ventus GeForce RTX 5090 Graphics Card",
+     "WHIDescription": null,
+     "ProductName": "MSI Ventus GeForce RTX 5090 32GB",
+     "ManualProductName": "MSI Ventus GeForce RTX 5090 32GB",
+     "SimplifiedWebDescription": null,
+     "SimplifiedLineDescription": null,
+     "SimplifiedBulletinDescription": null
+    },
+    "Seller": {
+     "SellerId": "BP4Z",
+     "SellerName": "TECH EDGE",
+     "SellerLogoURL": "Seller_BP4Z_19bf59b9-e83f-4036-a064-8e41519718a6.jpg",
+     "SellerRating": 4,
+     "SellerRatingOneDecimal": 4.2,
+     "SellerReviewCount": 5,
+     "SellerUrlKey": "TECH-EDGE",
+     "SellerModel": "PSP",
+     "TopRated": false,
+     "LifetimeOrderCount": 0,
+     "SellerRatingLast12M": 4,
+     "SellerRatingOneDecimalLast12M": 3.7,
+     "SellerReviewCountLast12M": 3,
+     "Anchor": true,
+     "IsHotSeller": true
+    },
+    "Model": "RTX 5090 32G VENTUS 3X",
+    "ItemManufactory": {
+     "BrandId": 1312,
+     "Code": 0,
+     "Manufactory": "MSI",
+     "CountryOfMfr": null,
+     "ManfactoryLogo": 1,
+     "ManufactoryWeb": null,
+     "Hyperlink": null,
+     "CustomerServicePhone": null,
+     "IsM2C": false,
+     "IsTopTierBrand": true,
+     "ManufacturerCodes": null
+    },
+    "Subcategory": {
+     "SubcategoryId": 48,
+     "PatchCount": 0,
+     "SubcategoryDescription": "GPUs / Video Graphics Cards",
+     "RealSubCategoryId": 48,
+     "RealSubCategoryDescription": "Video Card - Nvidia"
+    },
+    "Type": 0,
+    "ItemPriceRange": {
+     "PriceRangeMin": 12998,
+     "PriceRangeMax": 12999
+    },
+    "LowestPrice30Days": 0
+   },
+   "GroupItemCount": 16,
+   "RefurbishItemCount": 0,
+   "UsedItemCount": 0
+  }
+ ]
+}

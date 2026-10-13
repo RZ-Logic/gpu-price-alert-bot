@@ -1,0 +1,13 @@
+[project]
+name = "gpu-alerts"
+version = "2.0.0.dev0"
+description = "Discord price alerts for GPUs across Canadian retailers"
+requires-python = ">=3.11"
+license = "MIT"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "live: hits real retailer sites (deselect with -m 'not live'; CI never runs these)",
+]
+addopts = "-m 'not live'"

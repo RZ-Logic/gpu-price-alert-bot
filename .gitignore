@@ -1,6 +1,9 @@
-# Bot data
+# Bot data (alerts, price history, Discord IDs)
+data/
 gpu_alerts.json
 gpu_price_history.json
+*.sqlite3
+*.sqlite3-*
 
 # Environment
 .env
@@ -10,6 +13,7 @@ gpu_price_history.json
 __pycache__/
 *.py[cod]
 *.egg-info/
+.pytest_cache/
 dist/
 build/
 venv/
@@ -27,3 +31,6 @@ Thumbs.db
 
 # Docker
 docker-compose.override.yml
+
+# Local audit notes and raw captures (may contain local paths and probe parameters)
+research/

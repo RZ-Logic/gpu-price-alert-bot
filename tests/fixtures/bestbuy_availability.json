@@ -1,0 +1,61 @@
+{
+ "_note": "bestbuy.ca/ecomm-api/availability/products?...&skus=a|b trimmed",
+ "availabilities": [
+  {
+   "sku": "20164554",
+   "sellerId": "bbyca",
+   "shipping": {
+    "status": "InStock",
+    "purchasable": true,
+    "quantityRemaining": 4,
+    "isBackorderable": false
+   },
+   "pickup": {
+    "status": "OutOfStock",
+    "purchasable": false
+   }
+  },
+  {
+   "sku": "19177946",
+   "sellerId": "bbyca",
+   "shipping": {
+    "status": "InStock",
+    "purchasable": true,
+    "quantityRemaining": 22,
+    "isBackorderable": false
+   },
+   "pickup": {
+    "status": "OutOfStock",
+    "purchasable": false
+   }
+  },
+  {
+   "sku": "18934247",
+   "sellerId": "bbyca",
+   "shipping": {
+    "status": "InStock",
+    "purchasable": true,
+    "quantityRemaining": 30,
+    "isBackorderable": false
+   },
+   "pickup": {
+    "status": "OutOfStock",
+    "purchasable": false
+   }
+  },
+  {
+   "sku": "19953290",
+   "sellerId": "bbyca",
+   "shipping": {
+    "status": "InStock",
+    "purchasable": true,
+    "quantityRemaining": 68,
+    "isBackorderable": false
+   },
+   "pickup": {
+    "status": "OutOfStock",
+    "purchasable": false
+   }
+  }
+ ]
+}

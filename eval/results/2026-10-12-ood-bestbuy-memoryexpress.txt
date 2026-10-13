@@ -1,0 +1,51 @@
+eval\ood_bestbuy_memoryexpress.jsonl: 869 rows scored, 0 excluded as 'unknown', label field 'gold_label'
+
+== v1 substring filter ==
+overall  P 0.776  R 0.945  F1 0.852  TP 225  FP 65  FN 13  TN 566
+query               P      R     F1   TP   FP   FN   TN
+ARC B580        1.000  1.000  1.000    4    0    0   86
+RTX 5060 TI     0.977  0.935  0.956   43    1    3   65
+RTX 5070        0.444  0.970  0.610   32   40    1   53
+RTX 5070 TI     0.976  0.930  0.952   40    1    3   61
+RTX 5080        1.000  0.962  0.980   50    0    2   58
+RTX 5090        0.963  0.963  0.963   26    1    1   72
+RX 9070         0.312  1.000  0.476   10   22    0   86
+RX 9070 XT      1.000  0.870  0.930   20    0    3   85
+-- top 10 of 65 false positives (cheapest first)
+  [RX 9070]  1039.99  wrong_model    accepted                           ASRock Radeon RX 9070 XT Steel Legend 16GB PCI-E, White w/ HDMI, Triple DP
+  [RX 9070]  1039.99  wrong_model    accepted                           XFX Radeon RX 9070 XT OC Mercury Gaming Edition 16GB PCI-E w/ HDMI, Triple DP
+  [RX 9070]  1049.99  wrong_model    accepted                           XFX Quicksilver Radeon RX 9070 XT Gaming Edition 16GB PCI-E w/ HDMI, Triple DP
+  [RTX 5070 TI]  1079.99  wrong_model    accepted                           MSI GeForce RTX 5070 Vanguard SOC Launch Edition 12GB GDDR7 Video Card
+  [RX 9070]  1099.99  wrong_model    accepted                           Sapphire Pulse AMD Radeon RX 9070 XT 16GB GDDR6 Video Card
+  [RX 9070]  1109.99  wrong_model    accepted                           AMD Radeon RX 9070 GRE OC 12GB GDDR6 Video Card
+  [RX 9070]  1109.99  wrong_model    accepted                           Asus Radeon RX 9070 GRE PRIME EVO OC Edition 12GB PCI-E w/ HDMI, Triple DP, Black
+  [RX 9070]  1129.99  wrong_model    accepted                           Sapphire Radeon RX 9070 XT PULSE 16GB PCI-E w/ Dual HDMI, Dual DP
+  [RX 9070]  1149.99  wrong_model    accepted                           Sapphire Nitro+ AMD Radeon RX 9070 XT 16GB GDDR6 Video Card
+  [RTX 5070]  1189.95  wrong_model    accepted                           MSI GeForce RTX 5070 Ti Gaming Trio OC Plus 16GB GDDR7 Video Card
+-- top 10 of 13 false negatives (cheapest first)
+  [RTX 5060 TI]   719.99  correct        junk / no gpu keyword / under $200 PNY GeForce RTX5060 Ti OC Dual-Fan 8GB GDDR7 Video Card
+  [RX 9070 XT]  1049.99  correct        query words missing                XFX Radeon 9070 XT Quicksilver 16GB PCI-E w/ HDMI, Triple DP, White
+  [RX 9070 XT]  1069.99  correct        junk / no gpu keyword / under $200 XFX Radeon RX 9070 XT OC Mercury Edition 16GB PCI-E w/ Triple Magnetic Air Fans, RGB, HDMI, Triple DP
+  [RTX 5060 TI]  1129.99  correct        junk / no gpu keyword / under $200 PNY GeForce RTX5060 Ti OC Dual-Fan16GB GDDR7 Video Card
+  [RX 9070 XT]  1299.99  correct        junk / no gpu keyword / under $200 XFX Swift Radeon RX 9070 XT Triple Fan Gaming Edition 16GB PCI-E w/ HDMI, Triple DP
+  [RTX 5060 TI]  1325.99  correct        junk / no gpu keyword / under $200 （Open Box）-PNY GeForce RTX™ 5060 Ti 16GB RGB™ Overclocked Triple Fan GPU
+  [RTX 5070 TI]  1769.99  correct        junk / no gpu keyword / under $200 PNY GeForce RTX 5070 Ti OC Triple Fan 16GB GDDR7 Video Card
+  [RTX 5070 TI]  1805.00  correct        junk / no gpu keyword / under $200 PNY GeForce RTX 5070 Ti Overclocked Triple Fan 16GB GDDR6 Graphics Card – High-Performance Gaming & Creative G
+  [RTX 5070 TI]  1899.99  correct        junk / no gpu keyword / under $200 PNY GeForce RTX 5070 Ti ARGB Epic-X RGB OC Triple-Fan 16GB GDDR7 Video Card
+  [RTX 5070]  2199.99  correct        junk / no gpu keyword / under $200 ASUS TUF Gaming GeForce RTX 5070 12GB GDDR7 OC Edition Gaming Graphics Card PCIe 5.0, HDMI /DP 2.1, 3.125slot,
+
+== v2 matcher ==
+overall  P 1.000  R 1.000  F1 1.000  TP 238  FP 0  FN 0  TN 631
+query               P      R     F1   TP   FP   FN   TN
+ARC B580        1.000  1.000  1.000    4    0    0   86
+RTX 5060 TI     1.000  1.000  1.000   46    0    0   66
+RTX 5070        1.000  1.000  1.000   33    0    0   93
+RTX 5070 TI     1.000  1.000  1.000   43    0    0   62
+RTX 5080        1.000  1.000  1.000   52    0    0   58
+RTX 5090        1.000  1.000  1.000   27    0    0   73
+RX 9070         1.000  1.000  1.000   10    0    0  108
+RX 9070 XT      1.000  1.000  1.000   23    0    0   85
+-- top 0 of 0 false positives (cheapest first)
+-- top 0 of 0 false negatives (cheapest first)
+
+pre-registered targets (v2): all met

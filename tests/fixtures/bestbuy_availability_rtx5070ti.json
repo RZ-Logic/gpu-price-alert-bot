@@ -1,0 +1,1045 @@
+{
+ "_note": "bestbuy.ca/ecomm-api/availability/products for the 40 numeric SKUs of bestbuy_search_rtx5070ti.json, fetched 2026-10-12; delivery options removed",
+ "availabilities": [
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 11,
+    "scheduledDelivery": false,
+    "status": "InStock"
+   },
+   "sku": "19358759"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 9,
+    "scheduledDelivery": false,
+    "status": "InStock"
+   },
+   "sku": "19322728"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "OnlineOnly"
+   },
+   "saleChannelExclusivity": "OnlineOnly",
+   "scheduledDelivery": false,
+   "sellerId": "1026511",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 5,
+    "scheduledDelivery": false,
+    "status": "InStockOnlineOnly"
+   },
+   "sku": "19590993"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 15,
+    "scheduledDelivery": false,
+    "status": "InStock"
+   },
+   "sku": "19198422"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": false,
+    "quantityRemaining": 0,
+    "scheduledDelivery": false,
+    "status": "SoldOutOnline"
+   },
+   "sku": "19183868"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": false,
+    "quantityRemaining": 0,
+    "scheduledDelivery": false,
+    "status": "SoldOutOnline"
+   },
+   "sku": "19875267"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": false,
+    "quantityRemaining": 0,
+    "scheduledDelivery": false,
+    "status": "SoldOutOnline"
+   },
+   "sku": "19183866"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "OnlineOnly"
+   },
+   "saleChannelExclusivity": "OnlineOnly",
+   "scheduledDelivery": false,
+   "sellerId": "1026511",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 12,
+    "scheduledDelivery": false,
+    "status": "InStockOnlineOnly"
+   },
+   "sku": "19958829"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 166,
+    "scheduledDelivery": false,
+    "status": "InStock"
+   },
+   "sku": "18934179"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "OnlineOnly"
+   },
+   "saleChannelExclusivity": "OnlineOnly",
+   "scheduledDelivery": false,
+   "sellerId": "396147",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 1,
+    "scheduledDelivery": false,
+    "status": "InStockOnlineOnly"
+   },
+   "sku": "19800573"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 6,
+    "scheduledDelivery": false,
+    "status": "InStock"
+   },
+   "sku": "19755650"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "OnlineOnly"
+   },
+   "saleChannelExclusivity": "OnlineOnly",
+   "scheduledDelivery": false,
+   "sellerId": "861510",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 1,
+    "scheduledDelivery": false,
+    "status": "InStockOnlineOnly"
+   },
+   "sku": "19611842"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": false,
+    "quantityRemaining": 0,
+    "scheduledDelivery": false,
+    "status": "SoldOutOnline"
+   },
+   "sku": "19177950"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": false,
+    "quantityRemaining": 0,
+    "scheduledDelivery": false,
+    "status": "SoldOutOnline"
+   },
+   "sku": "19271269"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": false,
+    "quantityRemaining": 0,
+    "scheduledDelivery": false,
+    "status": "SoldOutOnline"
+   },
+   "sku": "19186504"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 129,
+    "scheduledDelivery": false,
+    "status": "InStock"
+   },
+   "sku": "18934180"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 6,
+    "scheduledDelivery": false,
+    "status": "InStock"
+   },
+   "sku": "19195873"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": false,
+    "quantityRemaining": 0,
+    "scheduledDelivery": false,
+    "status": "SoldOutOnline"
+   },
+   "sku": "19271267"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": false,
+    "quantityRemaining": 0,
+    "scheduledDelivery": false,
+    "status": "SoldOutOnline"
+   },
+   "sku": "19356453"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 81,
+    "scheduledDelivery": false,
+    "status": "InStock"
+   },
+   "sku": "19271271"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 10,
+    "scheduledDelivery": false,
+    "status": "InStock"
+   },
+   "sku": "18938759"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "OnlineOnly"
+   },
+   "saleChannelExclusivity": "OnlineOnly",
+   "scheduledDelivery": false,
+   "sellerId": "52827888",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 1,
+    "scheduledDelivery": false,
+    "status": "InStockOnlineOnly"
+   },
+   "sku": "20119430"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": false,
+    "quantityRemaining": 0,
+    "scheduledDelivery": false,
+    "status": "SoldOutOnline"
+   },
+   "sku": "19271268"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "OnlineOnly"
+   },
+   "saleChannelExclusivity": "OnlineOnly",
+   "scheduledDelivery": false,
+   "sellerId": "1026511",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 2,
+    "scheduledDelivery": false,
+    "status": "InStockOnlineOnly"
+   },
+   "sku": "19806346"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": false,
+    "quantityRemaining": 0,
+    "scheduledDelivery": false,
+    "status": "SoldOutOnline"
+   },
+   "sku": "18938751"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 24,
+    "scheduledDelivery": false,
+    "status": "InStock"
+   },
+   "sku": "19271270"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": false,
+    "quantityRemaining": 0,
+    "scheduledDelivery": false,
+    "status": "SoldOutOnline"
+   },
+   "sku": "18938760"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "OnlineOnly"
+   },
+   "saleChannelExclusivity": "OnlineOnly",
+   "scheduledDelivery": false,
+   "sellerId": "1026511",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 3,
+    "scheduledDelivery": false,
+    "status": "InStockOnlineOnly"
+   },
+   "sku": "19373180"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 1,
+    "scheduledDelivery": false,
+    "status": "InStock"
+   },
+   "sku": "19195871"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": false,
+    "quantityRemaining": 0,
+    "scheduledDelivery": false,
+    "status": "SoldOutOnline"
+   },
+   "sku": "18938752"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "OnlineOnly"
+   },
+   "saleChannelExclusivity": "OnlineOnly",
+   "scheduledDelivery": false,
+   "sellerId": "396147",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 1,
+    "scheduledDelivery": false,
+    "status": "InStockOnlineOnly"
+   },
+   "sku": "19897857"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "OnlineOnly"
+   },
+   "saleChannelExclusivity": "OnlineOnly",
+   "scheduledDelivery": false,
+   "sellerId": "1026511",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 1,
+    "scheduledDelivery": false,
+    "status": "InStockOnlineOnly"
+   },
+   "sku": "19869678"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 12,
+    "scheduledDelivery": false,
+    "status": "InStock"
+   },
+   "sku": "19372419"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "OnlineOnly"
+   },
+   "saleChannelExclusivity": "OnlineOnly",
+   "scheduledDelivery": false,
+   "sellerId": "72514429",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 2,
+    "scheduledDelivery": false,
+    "status": "InStockOnlineOnly"
+   },
+   "sku": "20190157"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "OnlineOnly"
+   },
+   "saleChannelExclusivity": "OnlineOnly",
+   "scheduledDelivery": false,
+   "sellerId": "1026511",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 5,
+    "scheduledDelivery": false,
+    "status": "InStockOnlineOnly"
+   },
+   "sku": "19869806"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "OnlineOnly"
+   },
+   "saleChannelExclusivity": "OnlineOnly",
+   "scheduledDelivery": false,
+   "sellerId": "1026511",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 3,
+    "scheduledDelivery": false,
+    "status": "InStockOnlineOnly"
+   },
+   "sku": "20113100"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 29,
+    "scheduledDelivery": false,
+    "status": "InStock"
+   },
+   "sku": "19312411"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "NotAvailable"
+   },
+   "saleChannelExclusivity": "InStoreAndOnline",
+   "scheduledDelivery": false,
+   "sellerId": "bbyca",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": false,
+    "quantityRemaining": 0,
+    "scheduledDelivery": false,
+    "status": "SoldOutOnline"
+   },
+   "sku": "19312413"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "OnlineOnly"
+   },
+   "saleChannelExclusivity": "OnlineOnly",
+   "scheduledDelivery": false,
+   "sellerId": "52827888",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 1,
+    "scheduledDelivery": false,
+    "status": "InStockOnlineOnly"
+   },
+   "sku": "20119472"
+  },
+  {
+   "isGiftCard": false,
+   "isService": false,
+   "pickup": {
+    "purchasable": false,
+    "status": "OnlineOnly"
+   },
+   "saleChannelExclusivity": "OnlineOnly",
+   "scheduledDelivery": false,
+   "sellerId": "1241539",
+   "shipping": {
+    "backorderable": false,
+    "countdownIsZone": false,
+    "freeShippingEligible": false,
+    "hasActiveCountdown": true,
+    "isBackorderable": false,
+    "isFreeShippingEligible": false,
+    "orderLimit": null,
+    "preorderInfo": null,
+    "purchasable": true,
+    "quantityRemaining": 1,
+    "scheduledDelivery": false,
+    "status": "InStockOnlineOnly"
+   },
+   "sku": "19828029"
+  }
+ ]
+}
