@@ -73,7 +73,7 @@ def stats_line(stats: PriceStats | None) -> str:
         return "no history yet"
     return (
         f"low {money(stats.low_cents)}, median {money(stats.median_cents)}, "
-        f"high {money(stats.high_cents)} over {stats.count} checks"
+        f"high {money(stats.high_cents)} over {stats.count} check{'' if stats.count == 1 else 's'}"
     )
 
 

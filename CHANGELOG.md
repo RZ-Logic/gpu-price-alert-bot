@@ -12,7 +12,7 @@ A rewrite. v1's single file is replaced by the `gpu_alerts` package.
 
 **Discord.** Slash commands reply through deferred interactions, inputs are validated, `/lookup` and `/check` have cooldowns, `/prices` serves recent data, `/health` shows retailer status, and the owner gets a DM when a retailer keeps failing. No privileged intents. Optional instant command sync to one server.
 
-**Tooling.** CLI (`lookup`, `health`, `import-v1`), 391 offline tests and 6 live ones, CI, MIT licence file, a working `.gitignore`, pinned requirements.
+**Tooling.** CLI (`lookup`, `health`, `import-v1`), 392 offline tests and 6 live ones, CI, MIT licence file, a working `.gitignore`, pinned requirements.
 
 **Review.** Built from a live audit of v1 (four agents: retailers, code, platform facts, market) and a GitHub survey (two agents), which found no maintained Canadian GPU price-alert bot to fork. Three reviewers raised 27 findings after the build (2 high, 9 medium, 16 low); all high and medium findings are fixed with tests (the Canada Computers search depth was widened from 48 to 96 rows, not removed); 9 low ones are fixed, 2 in part, and 5 are left open and documented under Limitations.
 

@@ -34,6 +34,14 @@
 
 GPU Deals Canada is a self-hosted Discord bot. You tell it `/alert RTX 5070 Ti 1500`, and it checks Best Buy, Canada Computers, Memory Express, Newegg, Amazon.ca and Walmart every hour. When the cheapest listing that is really an RTX 5070 Ti (not a 5070, not a laptop, not a riser cable), new, not marked sold out and not listed by a marketplace seller drops to $1,500 or less, it pings you once, with the link, the next-best retailers and the 30-day context.
 
+<p align="center">
+  <img src="assets/discord-lookup.png" alt="Discord /lookup for RTX 5070 Ti: best $1,609.99 at Memory Express, a price and stock line for each of the six retailers, Walmart marketplace only, and the 30-day low, median and high" width="560"/>
+  <br/>
+  <img src="assets/discord-alert-set.png" alt="Discord /alert reply: alert set for RTX 5090 at or below $3,000, checked every 60 minutes" width="560"/>
+  <br/>
+  <sub><code>/lookup</code> and <code>/alert</code> in Discord, 2026-10-12</sub>
+</p>
+
 **Why not a keyword alert?** Because GPU names are traps. "RTX 5070" is inside every "RTX 5070 Ti" title, "RX 9070" is inside "RX 9070 XT" and "RX 9070 GRE", and "TI" is inside "MULTI" and "EDITION". Version 1 of this bot matched words that way. When I audited it on 2026-10-12, only 18 of the 66 listings it accepted as an RX 9070 in a snapshot of 970 search results were one (0.24 to 0.32 on the labelled test sets [below](#-does-it-work)), and its "best RTX 5090" at Canada Computers was a $5,999.99 laptop. Version 2 parses every title into a model, a suffix and a VRAM size, and its accuracy is [measured on listings it never saw](#-does-it-work).
 
 ---
@@ -188,7 +196,7 @@ All six returned results live for the eight test models on 2026-10-12. Amazon.ca
 
 ### How it was reviewed
 
-Built from a live audit of v1 and a survey of existing GitHub projects. After the build, three reviewers raised 27 findings; every high and medium one is fixed with a test. The 391 offline tests run in CI on Linux and Windows. The record is in [`CHANGELOG.md`](CHANGELOG.md).
+Built from a live audit of v1 and a survey of existing GitHub projects. After the build, three reviewers raised 27 findings; every high and medium one is fixed with a test. The 392 offline tests run in CI on Linux and Windows. The record is in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -221,7 +229,7 @@ Development (with the virtual environment active):
 
 ```bash
 python -m pip install -r requirements-dev.txt   # adds pytest
-python -m pytest -q                       # 391 offline tests, no network, no token
+python -m pytest -q                       # 392 offline tests, no network, no token
 python -m pytest -q -m live               # live smoke tests against each retailer
 python -m gpu_alerts health               # one search on every retailer, with status and timing
 python eval/evaluate.py eval/heldout.jsonl --label-field gold_label --check

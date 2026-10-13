@@ -66,7 +66,7 @@ Adapted from the *"Where is the AI?"* table in [FinAgent OS](https://github.com/
 | `gpu_alerts/bot.py` | Slash commands, background loop, delivery, owner health DM | None |
 | `gpu_alerts/__main__.py` | CLI: `run`, `lookup`, `health`, `import-v1` | None |
 | `eval/` | Pre-registration, data splits, v1 baseline, scorer, results | Labels from blind labeler agents, checked against an automated labeler |
-| `tests/` | 391 offline tests on saved retailer pages and fakes, 6 live smoke tests | None |
+| `tests/` | 392 offline tests on saved retailer pages and fakes, 6 live smoke tests | None |
 
 ## Stack
 

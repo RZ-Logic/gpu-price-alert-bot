@@ -592,3 +592,13 @@ def test_dm_owner_resolves_a_team_owner_to_a_user(client, monkeypatch):
     monkeypatch.setattr(client, "fetch_user", fetch_user)
     run(client.dm_owner("hello"))
     assert dm.sent == [("hello", {})]
+
+
+def test_stats_line_says_check_for_one():
+    from gpu_alerts.bot import stats_line
+    from gpu_alerts.store import PriceStats
+
+    one = PriceStats("rtx-5080", 30, 160_999, None, 160_999, 160_999, 160_999, 1)
+    three = PriceStats("rtx-5080", 30, 160_999, None, 150_000, 160_999, 170_000, 3)
+    assert stats_line(one).endswith("over 1 check")
+    assert stats_line(three).endswith("over 3 checks")
