@@ -273,4 +273,6 @@ Also built: __[FinAgent OS](https://github.com/RZ-Logic/finagent-os)__ · __[reg
 
 <p align="center">
   <em>If you find this useful, a star helps others find it.</em>
+  <br><br>
+  Built by a gamer who does <a href="https://www.youtube.com/@BT_01">no-damage boss fights when time permits</a> and builds <a href="https://github.com/RZ-Logic/jobsignal-engine">open-source tools that help people</a>.
 </p>
