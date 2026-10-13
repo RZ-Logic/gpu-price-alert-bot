@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>A Discord ping when the exact GPU you want drops under your price.<br/>
-  Six Canadian retailers, in stock and sold by the retailer by default, with the title matcher's accuracy measured on held-out listings.</strong>
+  Six Canadian retailers. Listings marked sold out or sold by marketplace sellers are skipped by default, and the title matcher's accuracy is measured on listings it never saw.</strong>
 </p>
 
 <p align="center">
@@ -52,8 +52,20 @@ GPU Deals Canada is a self-hosted Discord bot. You tell it `/alert RTX 5070 Ti 1
 git clone https://github.com/RZ-Logic/gpu-price-alert-bot.git
 cd gpu-price-alert-bot
 python -m venv .venv
-.venv/Scripts/python -m pip install -r requirements.txt   # Windows
-.venv/bin/python -m pip install -r requirements.txt       # macOS / Linux
+```
+
+Activate the virtual environment, in every new terminal you run the bot from:
+
+| Shell | Command |
+|---|---|
+| PowerShell | `.venv\Scripts\Activate.ps1` |
+| Command Prompt | `.venv\Scripts\activate.bat` |
+| macOS / Linux | `source .venv/bin/activate` |
+
+Then install. With the environment active, every `python` below is the environment's interpreter. (If you prefer not to activate, call `.venv\Scripts\python` on Windows or `.venv/bin/python` elsewhere instead of `python`.)
+
+```bash
+python -m pip install -r requirements.txt
 ```
 
 Copy [`.env.example`](.env.example) to `.env` (git ignores it) and fill in:
@@ -109,7 +121,7 @@ Top 5 of 60 eligible offers:
     https://www.memoryexpress.com/Products/MX00132578
 ```
 
-Walmart answered `429 Too Many Requests` on that run, after about three hours of testing that evening. The lookup says "blocked" instead of "no listings". In a background check the bot then skips Walmart for the remaining models and `/health` counts the failure (a terminal lookup does neither). v1 could not tell a block from an empty result. When a retailer answers but nothing qualifies, the column says why, for example `sold out (6 found)` or `marketplace only (8 found)`.
+Walmart answered `429 Too Many Requests` on that run, after about three hours of testing, and the bot reports it as "blocked", not as "no listings" (v1 could not tell the two apart). When a retailer answers but nothing qualifies, the column says why, for example `sold out (6 found)` or `marketplace only (8 found)`.
 
 ---
 
@@ -142,11 +154,7 @@ Requests use pinned browser TLS fingerprints (`curl_cffi`), at least 2 seconds a
 
 **What counts as an offer.** By default a listing must match the model exactly, be at or above a sanity floor for that model (so a $22 riser cable never counts), be new, not be marked sold out, and not come from a marketplace seller. `open_box:True` adds open-box and refurbished listings; `marketplace:True` adds third-party sellers (needed for Walmart).
 
-**When it pings.**
-- Once, when the best offer first reaches your target.
-- Again only if the price falls a further 3% or $25.
-- It re-arms after two scans above target in which the retailer that had the deal answered, so a retailer that is blocked for an hour does not cause a repeat ping, and a card that sells out everywhere and comes back under target pings again.
-- Delivery goes to the channel where you set the alert, then falls back to a DM.
+**When it pings.** Once, when the best offer first reaches your target, and again only if the price falls a further 3% or $25. It re-arms after two scans above target in which the retailer that had the deal answered, so a blocked retailer cannot cause a repeat ping, and a restock after a sell-out pings again. Delivery goes to the alert's channel, then falls back to a DM.
 
 **The catalog** ([`catalog.json`](gpu_alerts/data/catalog.json)): RTX 50 series with the RTX 5060 Ti 8GB and 16GB as separate models, RX 9070 XT, 9070, 9070 GRE, RX 9060 XT 8GB and 16GB, RX 9060, Arc B580 and B570, plus RTX 40 and RX 7000 cards marked legacy. A new SKU is usually a data entry, not a code change.
 
@@ -156,43 +164,44 @@ Requests use pinned browser TLS fingerprints (`curl_cffi`), at least 2 seconds a
 
 ### Is it the right card?
 
-The question that matters for a deal alert is precision: of the listings the matcher accepts as your card, how many are your card. A wrong one is a false deal ping. The targets were written down in [`eval/PREREGISTRATION.md`](eval/PREREGISTRATION.md) before the matcher was built: precision at least 0.97 overall and 0.90 for each of the 8 test models, recall at least 0.90. Each test set was scored once.
+For a deal alert the number that matters is precision: of the listings accepted as your card, how many really are. The targets were fixed in [`eval/PREREGISTRATION.md`](eval/PREREGISTRATION.md) before the matcher was built (precision at least 0.97 overall and 0.90 per model, recall at least 0.90), and each test set was scored once.
 
 | Test set (captured 2026-10-12) | Rows scored | v1 precision / recall | v2 precision / recall |
 |---|:-:|:-:|:-:|
 | Held-out split: Newegg, Amazon.ca, Walmart, Canada Computers | 397 | 0.746 / 0.812 | **1.000 / 1.000** |
 | Retailers the matcher never saw: Best Buy, Memory Express | 869 | 0.776 / 0.945 | **1.000 / 1.000** |
 
-v1's worst cases were the base models: RTX 5070 precision 0.40 and 0.44 on the two sets, RX 9070 0.24 and 0.31, because Ti, XT and GRE listings passed as the base card.
+v1's worst cases were the base models: an RTX 5070 alert was right 40 to 44% of the time and an RX 9070 alert 24 to 31%, because Ti, XT and GRE listings passed as the base card.
 
-**How to read these numbers.** They are better than the bot will be in the wild, for reasons that are on the record:
+**Read these as an upper bound.**
+- About half the held-out titles closely resemble tuning titles (the same products at several stores), which is why the second set uses retailers the matcher never saw.
+- Best Buy and Memory Express titles are clean; messier stores will test the matcher harder.
+- The labels come from an automated labeler and blind AI labelers, not from a person; 5 disagreements await a human decision.
+- VRAM (8GB versus 16GB) is covered by unit tests, not by this eval.
+- The matcher was fixed after scoring, so these sets are now a regression check; a fresh held-out set is on the roadmap.
 
-- **Near-duplicates.** The held-out split shares retailers, queries and capture day with the tuning data: 49% of its titles have a tuning title with at least 80% of the same words. That is why the second set uses retailers the matcher never saw.
-- **Clean titles.** Best Buy and Memory Express titles are tidy, and the two blind labelers, who each labelled this whole set, agreed on all 869 rows. Messier stores would test the matcher harder.
-- **Who labelled.** On the first set, labels came from an automated labeler checked against blind labels from two Sonnet agents that split the titles between them and read each one against a written rubric without seeing any code. The two label sets agreed on correct versus not correct for 397 of 402 held-out listings; the 5 disagreements are excluded and listed in [`eval/heldout_disagreements.jsonl`](eval/heldout_disagreements.jsonl), and 12 more rows are excluded as unknown or unsure. No human labelled any row, and the 5 disagreements still await a human decision.
-- **VRAM is not in the eval.** The labels name the model, not the memory size, so the 8GB versus 16GB rule is covered by unit tests only.
-- **The matcher changed after scoring.** A code review then wrote 100 trick titles ("RTX 4080S", "8GB/16GB", "RTX 5070 with a 5070 Ti cooler"). 51 fooled the matcher on its own; after the fixes, 17 still do, mostly laptops and prebuilt PCs that describe their GPU like a card ([`eval/adversarial_titles.py`](eval/adversarial_titles.py) reruns them). Every adapter also filters by the retailer's own category before matching (Walmart's filter has a gap for sponsored rows), which removes most laptops and prebuilt PCs. Re-scoring the fixed matcher on the same sets gave identical results ([regression run](eval/results/2026-10-12-regression-after-review-fixes.txt)), but a set it has already seen is a regression check, not a new measurement. A fresh held-out set is on the roadmap.
+The full caveats, with numbers, are in [`eval/README.md`](eval/README.md#caveats-in-full).
 
 ### Does it reach the retailers?
 
-On 2026-10-12, from a home connection in Ontario, each adapter was run live for the eight test models (RTX 5090, 5080, 5070 Ti, 5070, 5060 Ti, RX 9070 XT, RX 9070, Arc B580). All six returned results. The limits found are under [Limitations](#-limitations): Amazon.ca showed its bot check after about five searches in a few minutes, and Walmart rate-limited after about three hours of testing.
+All six returned results live for the eight test models on 2026-10-12. Amazon.ca and Walmart push back when searched too often (see [Limitations](#-limitations)).
 
-### Review record
+### How it was reviewed
 
-The rewrite started from a live audit of v1 (four agents: retailers, code, platform facts, market) and a GitHub survey of existing projects (two agents), which found no maintained Canadian GPU price-alert bot to fork. After the build, three Opus reviewers read the code in separate slices and raised 27 findings: 2 high, 9 medium and 16 low. All high and medium findings are fixed with a regression test each (the Canada Computers search depth was widened from 48 to 96 rows, not removed); of the low ones, 9 are fixed, 2 in part, and 5 are left open and listed under [Limitations](#-limitations). The suite has 391 offline tests plus 6 live ones that are skipped unless asked for.
+Built from a live audit of v1 and a survey of existing GitHub projects. After the build, three reviewers raised 27 findings; every high and medium one is fixed with a test. The 391 offline tests run in CI on Linux and Windows. The record is in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
 ## 🫡 Limitations
 
-- **Terms of use.** Amazon.ca's and Newegg's terms prohibit automated data collection, and other retailers' terms say similar things. This is a personal, low-volume tool: one scheduled search per GPU per retailer per check (hourly by default; one to four requests plus retries), plus rate-limited scans from `/lookup`, `/check` and `/prices`, spaced out. Turn any retailer off with `DISABLED_RETAILERS`. Do not run it as a public service.
+- **Terms of use.** Amazon.ca's and Newegg's terms prohibit automated data collection, and other retailers' terms are similar. This is a personal, low-volume tool: a few spaced-out requests per GPU per retailer per check (hourly by default), plus rate-limited commands. Turn any retailer off with `DISABLED_RETAILERS`, and do not run it as a public service.
 - **Bot checks happen.** Amazon.ca and Walmart push back when searched too often. The bot reports the block, skips that retailer for the rest of the scan and keeps the others; it never tries to solve a challenge.
 - **Hourly, not a restock sniper.** Cards that sell out in minutes can come and go between checks. Stock trackers exist for that; this bot is for price targets.
 - **Walmart is almost all marketplace** for graphics cards (every card seen on 2026-10-12), so it usually counts only on alerts set with `marketplace:True`.
-- **Search depth.** Canada Computers reads the cheapest 96 search results (4 pages of 24) and keeps the graphics cards among them; Newegg and Amazon.ca read two pages. A rare SKU listed past that depth can be missed; the detail column says so when Canada Computers or Memory Express hits its page cap.
+- **Search depth.** Canada Computers reads its cheapest 96 search results and keeps the graphics cards; Newegg and Amazon.ca read two pages. A rare SKU past that depth can be missed.
 - **Prices are before tax**, and include shipping where the retailer adds it to the listing (Newegg, Walmart). Mail-in rebates are ignored.
 - **It runs only while your computer is on**, and alerts posted in a server channel show your target to everyone in that channel.
-- **Open review items.** `/check` and `/prices` have no overall time limit, so a slow retailer makes them slow; Ctrl+C during a scan waits for the scan to finish; a `# comment` after a value in `.env` becomes part of the value; Walmart's category filter lets sponsored rows without category data through to the matcher.
+- **Open review items:** `/check` and `/prices` have no overall time limit; Ctrl+C waits for a running scan; a `# comment` after a `.env` value becomes part of the value; Walmart sponsored rows without category data reach the matcher.
 - **v1 imports** map names to catalog models; names that now have VRAM variants (RTX 5060 Ti, RTX 4060 Ti, RX 9060 XT) are skipped and need re-adding.
 - **New cards only.** Used listings (Kijiji, eBay.ca) are on the roadmap.
 
@@ -208,9 +217,10 @@ The rewrite started from a live audit of v1 (four agents: retailers, code, platf
 | [`eval/PREREGISTRATION.md`](eval/PREREGISTRATION.md) | The targets and protocol, fixed before scoring, with both addenda. |
 | [`CHANGELOG.md`](CHANGELOG.md) | v1 and v2, what changed and how it was reviewed. |
 
-Development:
+Development (with the virtual environment active):
 
 ```bash
+python -m pip install -r requirements-dev.txt   # adds pytest
 python -m pytest -q                       # 391 offline tests, no network, no token
 python -m pytest -q -m live               # live smoke tests against each retailer
 python -m gpu_alerts health               # one search on every retailer, with status and timing
@@ -235,7 +245,7 @@ I'm an ACCA with audit roots who now builds AI automation. Audit teaches one hab
 
 Version 1 went up in April 2026 and did its job well enough. When I audited it in October, it was quietly broken. Newegg answered every search with a CAPTCHA page and Amazon.ca with an error page, and the bot read both as "no listings". On the two retailers still answering, an RX 9070 alert accepted 9070 XT and 9070 GRE listings, sold-out cards counted as deals, and the hourly check pinged the same deal every hour while never saving the price history its trend command relied on. Nothing crashed. It was confidently wrong, which for an alert is worse than silent.
 
-**On why rules and not a model for matching:** GPU names are a small, closed vocabulary with known traps: suffixes, VRAM variants, part codes, laptops and prebuilts that name the GPU. A tokenizer and rules, scored against labels they never saw, met every pre-registered target (Arc B580 had only 4 accepted rows on the Best Buy and Memory Express set, too few to judge on its own). A model would add cost and non-determinism to a problem that does not need it. Used listings are different, free text written by people, and that is where a classifier may earn its place, once it beats the rules on a labelled set.
+**On why rules and not a model for matching:** GPU names are a small, closed vocabulary with known traps: suffixes, VRAM variants, part codes, laptops and prebuilts that name the GPU. A tokenizer and rules, scored against labels they never saw, met every pre-registered target (one model had too few rows on the second set to judge on its own). A model would add cost and non-determinism to a problem that does not need it. Used listings are different, free text written by people, and that is where a classifier may earn its place, once it beats the rules on a labelled set.
 
 It's the same split I use in **[FinAgent OS](https://github.com/RZ-Logic/finagent-os)** (governance for finance agents) and **[RegisterBench](https://github.com/RZ-Logic/RegisterBench)** (a benchmark with seeded ground truth): deterministic code where the answer can be checked, and every claim measured before it is made. The design choices are in [`docs/build-decisions.md`](docs/build-decisions.md).
 
@@ -252,7 +262,7 @@ It's the same split I use in **[FinAgent OS](https://github.com/RZ-Logic/finagen
 
 ## 📜 License
 
-**Code:** MIT, see [`LICENSE`](./LICENSE). Use it, fork it, add a retailer; the acknowledgement is a link back.
+**Code:** MIT, see [`LICENSE`](./LICENSE). Use it, fork it, add a retailer. Keep the copyright and permission notice; a link back is appreciated.
 
 **Data:** prices and listing titles belong to the retailers. The evaluation files in [`eval/`](eval/) hold listing titles and prices captured on 2026-10-12, kept only to measure the matcher.
 

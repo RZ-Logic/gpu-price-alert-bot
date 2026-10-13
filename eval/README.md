@@ -73,3 +73,35 @@ RTX 5070 (Ti accepted). All 9 remaining v2 disagreements are rows in
 cards labelled `correct`, and one real 5070 Ti card labelled `accessory`). These
 are dev numbers on data the matcher was tuned on, so they are optimistic. The
 pre-registered claim is the held-out test result.
+
+## Caveats in full
+
+The headline numbers (precision and recall 1.000 on both test sets) are an upper
+bound, for these reasons:
+
+- **Near-duplicates.** The held-out split shares retailers, queries and capture
+  day with the tuning data: 49% of its titles have a tuning title with at least
+  80% of the same words (token Jaccard on `matching.normalise()`). The
+  out-of-distribution set (Best Buy and Memory Express) exists for that reason.
+- **Clean titles.** Best Buy and Memory Express titles are tidy. The two blind
+  labelers, who each labelled that whole set, agreed on all 869 rows.
+- **Who labelled.** On the held-out split, labels came from an automated labeler
+  checked against blind labels from two Sonnet agents that split the titles
+  between them and read each against a written rubric without seeing any code.
+  The two label sets agreed on correct versus not correct for 397 of 402 rows;
+  the 5 disagreements are excluded and listed in `heldout_disagreements.jsonl`,
+  and 12 more rows are excluded as unknown or unsure. No human labelled any row,
+  and the 5 disagreements still await a human decision.
+- **VRAM is not in the eval.** The labels name the model, not the memory size,
+  so the 8GB versus 16GB rule is covered by unit tests only.
+- **Small cells.** Arc B580 had 4 accepted rows on the out-of-distribution set,
+  below the pre-registered minimum of 5 for judging a model on its own.
+- **The matcher changed after scoring.** A code review wrote 100 trick titles
+  ("RTX 4080S", "8GB/16GB", "RTX 5070 with a 5070 Ti cooler"). 51 fooled the
+  matcher on its own; after the fixes, 17 still do, mostly laptops and prebuilt
+  PCs that describe their GPU like a card (`adversarial_titles.py` reruns them).
+  Every adapter also filters by the retailer's own category before matching
+  (Walmart's filter has a gap for sponsored rows), which removes most laptops
+  and prebuilt PCs. Re-scoring the fixed matcher on the same sets gave identical
+  results (`results/2026-10-12-regression-after-review-fixes.txt`), but a set it
+  has already seen is a regression check, not a new measurement.

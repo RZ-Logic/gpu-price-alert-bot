@@ -14,7 +14,7 @@ A rewrite. v1's single file is replaced by the `gpu_alerts` package.
 
 **Tooling.** CLI (`lookup`, `health`, `import-v1`), 391 offline tests and 6 live ones, CI, MIT licence file, a working `.gitignore`, pinned requirements.
 
-**Review.** Built from a live audit of v1 and a GitHub survey. Three reviewers raised 27 findings after the build (2 high, 9 medium, 16 low); all high and medium findings are fixed with tests (the Canada Computers search depth was widened from 48 to 96 rows, not removed); 9 low ones are fixed, 2 in part, and 5 are left open and documented under Limitations.
+**Review.** Built from a live audit of v1 (four agents: retailers, code, platform facts, market) and a GitHub survey (two agents), which found no maintained Canadian GPU price-alert bot to fork. Three reviewers raised 27 findings after the build (2 high, 9 medium, 16 low); all high and medium findings are fixed with tests (the Canada Computers search depth was widened from 48 to 96 rows, not removed); 9 low ones are fixed, 2 in part, and 5 are left open and documented under Limitations.
 
 ## v1.0 (2026-04-11)
 
