@@ -35,6 +35,9 @@ CREATE TABLE IF NOT EXISTS alerts (
     above_streak INTEGER NOT NULL DEFAULT 0,
     notified_retailer TEXT,
     rev INTEGER NOT NULL DEFAULT 0,
+    holding_retailers TEXT,
+    held_streak INTEGER NOT NULL DEFAULT 0,
+    observed_at TEXT,
     last_price_cents INTEGER,
     last_checked_at TEXT,
     created_at TEXT NOT NULL,
@@ -77,6 +80,14 @@ CREATE TABLE IF NOT EXISTS scrape_runs (
     detail TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS scrape_runs_retailer_at ON scrape_runs (retailer, at);
+-- v1 entries import_v1 has seen, so running it again cannot bring back an alert
+-- the user removed since.
+CREATE TABLE IF NOT EXISTS v1_imports (
+    user_id INTEGER NOT NULL,
+    model_id TEXT NOT NULL,
+    imported_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, model_id)
+);
 """
 
 OK_STATUSES = (Status.OK.value, Status.EMPTY.value)
@@ -86,6 +97,9 @@ _ALERT_MIGRATIONS = {
     "above_streak": "INTEGER NOT NULL DEFAULT 0",
     "notified_retailer": "TEXT",
     "rev": "INTEGER NOT NULL DEFAULT 0",     # bumped by every user write (upsert_alert)
+    "holding_retailers": "TEXT",            # comma-separated retailer ids, see alerts.AlertState
+    "held_streak": "INTEGER NOT NULL DEFAULT 0",
+    "observed_at": "TEXT",                 # scanned_at of the newest scan the state reflects
 }
 
 
@@ -112,6 +126,14 @@ def parse_iso(text: str | None) -> datetime | None:
 
 def to_cents(price: float) -> int:
     return int(round(price * 100))
+
+
+def _join(retailers: Iterable[str]) -> str | None:
+    return ",".join(sorted(retailers)) or None
+
+
+def _split(text: str | None) -> frozenset[str]:
+    return frozenset(text.split(",")) if text else frozenset()
 
 
 def _bool(value: int | None) -> bool | None:
@@ -141,6 +163,9 @@ class Alert:
     above_streak: int = 0
     notified_retailer: str | None = None
     rev: int = 0
+    holding_retailers: frozenset[str] = frozenset()
+    held_streak: int = 0
+    observed_at: datetime | None = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> "Alert":
@@ -157,6 +182,9 @@ class Alert:
             above_streak=row["above_streak"] if "above_streak" in keys else 0,
             notified_retailer=row["notified_retailer"] if "notified_retailer" in keys else None,
             rev=row["rev"] if "rev" in keys else 0,
+            holding_retailers=_split(row["holding_retailers"]) if "holding_retailers" in keys else frozenset(),
+            held_streak=row["held_streak"] if "held_streak" in keys else 0,
+            observed_at=parse_iso(row["observed_at"]) if "observed_at" in keys else None,
         )
 
 
@@ -203,6 +231,20 @@ class RetailerHealth:
 class ImportReport:
     imported: list[str] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)
+    updated: list[str] = field(default_factory=list)   # only with force
+
+
+def _identity_guard(
+    sql: str, params: list, user_id: int | None, model_id: str | None
+) -> tuple[str, list]:
+    """Extend an alert UPDATE so it only hits the row of that user and GPU."""
+    if user_id is not None:
+        sql += " AND user_id = ?"
+        params.append(user_id)
+    if model_id is not None:
+        sql += " AND model_id = ?"
+        params.append(model_id)
+    return sql, params
 
 
 def _policy_sql(include_open_box: bool, include_marketplace: bool) -> str:
@@ -226,9 +268,14 @@ class Store:
             self._conn.execute("PRAGMA synchronous=NORMAL")
             self._conn.executescript(SCHEMA)
             cols = {r[1] for r in self._conn.execute("PRAGMA table_info(alerts)")}
-            for name, definition in _ALERT_MIGRATIONS.items():
-                if name not in cols:
-                    self._conn.execute(f"ALTER TABLE alerts ADD COLUMN {name} {definition}")
+            with self._conn:
+                self._conn.execute("BEGIN")   # a new column and its backfill land together
+                for name, definition in _ALERT_MIGRATIONS.items():
+                    if name not in cols:
+                        self._conn.execute(f"ALTER TABLE alerts ADD COLUMN {name} {definition}")
+                if "holding_retailers" not in cols:
+                    # Before v2.1 only the notified retailer held a disarmed alert.
+                    self._conn.execute("UPDATE alerts SET holding_retailers = notified_retailer")
 
     def close(self) -> None:
         with self._lock:
@@ -289,7 +336,8 @@ class Store:
                     "UPDATE alerts SET channel_id = ?, guild_id = ?, target_cents = ?,"
                     " include_open_box = ?, include_marketplace = ?, armed = 1,"
                     " notified_price_cents = NULL, notified_at = NULL, above_streak = 0,"
-                    " notified_retailer = NULL, rev = rev + 1 WHERE id = ?",
+                    " notified_retailer = NULL, holding_retailers = NULL, held_streak = 0,"
+                    " rev = rev + 1 WHERE id = ?",
                     (channel_id, guild_id, target_cents, int(include_open_box),
                      int(include_marketplace), existing["id"]),
                 )
@@ -328,25 +376,35 @@ class Store:
         expected_target_cents: int | None = None,
         above_streak: int = 0,
         notified_retailer: str | None = None,
+        holding_retailers: Iterable[str] = (),
+        held_streak: int = 0,
+        observed_at: datetime | None = None,
         expected_rev: int | None = None,
+        expected_user_id: int | None = None,
+        expected_model_id: str | None = None,
     ) -> bool:
         """Write the state-machine columns of one alert.
 
         With expected_target_cents, the write is skipped if the user changed the
         target since the alert was read. With expected_rev, it is skipped if the
         user wrote the alert at all since it was read (upsert_alert bumps rev),
-        so a re-arm with the same target is not undone. Returns False when
-        nothing was written.
+        so a re-arm with the same target is not undone. With expected_user_id and
+        expected_model_id, it is skipped if the alert was removed and its id went
+        to a new alert (SQLite reuses the highest id). With observed_at (the
+        scan's time), it is skipped unless the scan is newer than the one the
+        state already reflects, so a background run that read the prices before
+        a /check cannot overwrite what the /check saw. Returns False when nothing
+        was written.
         """
         sql = (
             "UPDATE alerts SET armed = ?, notified_price_cents = ?, notified_at = ?,"
-            " last_price_cents = ?, last_checked_at = ?, above_streak = ?, notified_retailer = ?"
-            " WHERE id = ?"
+            " last_price_cents = ?, last_checked_at = ?, above_streak = ?, notified_retailer = ?,"
+            " holding_retailers = ?, held_streak = ?, observed_at = COALESCE(?, observed_at) WHERE id = ?"
         )
         params: list = [
             int(armed), notified_price_cents, iso(notified_at) if notified_at else None,
             last_price_cents, iso(last_checked_at or utcnow()), above_streak, notified_retailer,
-            alert_id,
+            _join(holding_retailers), held_streak, iso(observed_at) if observed_at else None, alert_id,
         ]
         if expected_target_cents is not None:
             sql += " AND target_cents = ?"
@@ -354,17 +412,50 @@ class Store:
         if expected_rev is not None:
             sql += " AND rev = ?"
             params.append(expected_rev)
+        if observed_at is not None:
+            sql += " AND (observed_at IS NULL OR observed_at < ?)"
+            params.append(iso(observed_at))
+        sql, params = _identity_guard(sql, params, expected_user_id, expected_model_id)
         with self._lock, self._conn:
             cur = self._conn.execute(sql, params)
         return cur.rowcount > 0
 
-    def touch_alert(self, alert_id: int, last_price_cents: int | None, at: datetime | None = None) -> None:
-        """Record the latest price without changing the notification state."""
+    def undo_notification(self, previous: Alert, notified_price_cents: int) -> bool:
+        """Put back the notification state `previous` had before a notification at
+        notified_price_cents was saved but never reached the user.
+
+        Skipped when the user wrote the alert since, or a later check notified
+        again. The last price and the re-arm evidence stay as observed. Returns
+        False when nothing was written.
+        """
+        sql, params = _identity_guard(
+            "UPDATE alerts SET armed = ?, notified_price_cents = ?, notified_at = ?, notified_retailer = ?"
+            " WHERE id = ? AND rev = ? AND armed = 0 AND notified_price_cents = ?",
+            [int(previous.armed), previous.notified_price_cents,
+             iso(previous.notified_at) if previous.notified_at else None, previous.notified_retailer,
+             previous.id, previous.rev, notified_price_cents],
+            previous.user_id, previous.model_id,
+        )
         with self._lock, self._conn:
-            self._conn.execute(
-                "UPDATE alerts SET last_price_cents = ?, last_checked_at = ? WHERE id = ?",
-                (last_price_cents, iso(at or utcnow()), alert_id),
-            )
+            cur = self._conn.execute(sql, params)
+        return cur.rowcount > 0
+
+    def touch_alert(
+        self,
+        alert_id: int,
+        last_price_cents: int | None,
+        at: datetime | None = None,
+        *,
+        expected_user_id: int | None = None,
+        expected_model_id: str | None = None,
+    ) -> None:
+        """Record the latest price without changing the notification state."""
+        sql, params = _identity_guard(
+            "UPDATE alerts SET last_price_cents = ?, last_checked_at = ? WHERE id = ?",
+            [last_price_cents, iso(at or utcnow()), alert_id], expected_user_id, expected_model_id,
+        )
+        with self._lock, self._conn:
+            self._conn.execute(sql, params)
 
     # Scans and history
 
@@ -505,29 +596,32 @@ class Store:
     # Health and housekeeping
 
     def retailer_health(self) -> list[RetailerHealth]:
-        out: list[RetailerHealth] = []
-        retailers = [r["retailer"] for r in self._query(
-            "SELECT DISTINCT retailer FROM scrape_runs ORDER BY retailer")]
-        ok_list = ", ".join(f"'{s}'" for s in OK_STATUSES)
-        for rid in retailers:
-            last = self._query(
-                "SELECT * FROM scrape_runs WHERE retailer = ? ORDER BY at DESC, id DESC LIMIT 1", (rid,)
-            )[0]
-            ok_row = self._query(
-                f"SELECT MAX(at) AS at FROM scrape_runs WHERE retailer = ? AND status IN ({ok_list})", (rid,)
-            )[0]
-            last_ok = ok_row["at"]
-            (failures,) = self._query(
-                f"SELECT COUNT(*) FROM scrape_runs WHERE retailer = ? AND status NOT IN ({ok_list})"
-                " AND at > ?",
-                (rid, last_ok or ""),
-            )[0]
-            out.append(RetailerHealth(
-                retailer=rid, last_status=last["status"], last_at=parse_iso(last["at"]),
-                last_detail=last["detail"], last_http_status=last["http_status"],
-                consecutive_failures=failures, last_ok_at=parse_iso(last_ok),
-            ))
-        return out
+        # Hold the lock across every query, so a prune in between cannot remove a
+        # retailer's rows after it was listed.
+        with self._lock:
+            out: list[RetailerHealth] = []
+            retailers = [r["retailer"] for r in self._query(
+                "SELECT DISTINCT retailer FROM scrape_runs ORDER BY retailer")]
+            ok_list = ", ".join(f"'{s}'" for s in OK_STATUSES)
+            for rid in retailers:
+                last = self._query(
+                    "SELECT * FROM scrape_runs WHERE retailer = ? ORDER BY at DESC, id DESC LIMIT 1", (rid,)
+                )[0]
+                ok_row = self._query(
+                    f"SELECT MAX(at) AS at FROM scrape_runs WHERE retailer = ? AND status IN ({ok_list})", (rid,)
+                )[0]
+                last_ok = ok_row["at"]
+                (failures,) = self._query(
+                    f"SELECT COUNT(*) FROM scrape_runs WHERE retailer = ? AND status NOT IN ({ok_list})"
+                    " AND at > ?",
+                    (rid, last_ok or ""),
+                )[0]
+                out.append(RetailerHealth(
+                    retailer=rid, last_status=last["status"], last_at=parse_iso(last["at"]),
+                    last_detail=last["detail"], last_http_status=last["http_status"],
+                    consecutive_failures=failures, last_ok_at=parse_iso(last_ok),
+                ))
+            return out
 
     def prune(self, days: int = 180) -> int:
         """Delete scans, snapshots and scrape runs older than `days`. Returns rows removed."""
@@ -541,8 +635,14 @@ class Store:
             n += self._conn.execute("DELETE FROM scrape_runs WHERE at < ?", (cutoff,)).rowcount
         return n
 
-    def import_v1(self, path: str | Path) -> ImportReport:
-        """Import alerts from the v1 gpu_alerts.json ({user_id: {"RTX 5080": {...}}})."""
+    def import_v1(self, path: str | Path, *, force: bool = False) -> ImportReport:
+        """Import alerts from the v1 gpu_alerts.json ({user_id: {"RTX 5080": {...}}}).
+
+        Running it again changes nothing: an alert that exists stays as its user set
+        it (and pinged), and one removed since an earlier import stays removed. With
+        force, existing alerts take the file's target and channel but keep whether
+        they already pinged, and removed ones come back.
+        """
         doc = json.loads(Path(path).read_text(encoding="utf-8"))
         report = ImportReport()
         if not isinstance(doc, dict):
@@ -566,21 +666,53 @@ class Store:
                     report.skipped.append(f"{label}: target not positive")
                     continue
                 channel = data.get("channel_id")
+                channel_id = int(channel) if isinstance(channel, int) or str(channel).isdigit() else None
                 try:
                     created = parse_iso(data.get("created")) or utcnow()
                 except ValueError:
                     created = utcnow()
-                alert, _ = self.upsert_alert(
-                    int(uid), model.id, target,
-                    channel_id=int(channel) if isinstance(channel, int) or str(channel).isdigit() else None,
-                    created_at=created,
-                )
                 last_price = data.get("last_price")
-                if isinstance(last_price, (int, float)) and last_price > 0:
-                    try:
-                        checked = parse_iso(data.get("last_check"))
-                    except ValueError:
-                        checked = None
-                    self.touch_alert(alert.id, to_cents(last_price), checked)
-                report.imported.append(f"{label} -> {model.id} at ${target / 100:,.2f}")
+                try:
+                    checked = parse_iso(data.get("last_check"))
+                except ValueError:
+                    checked = None
+                done = f"{label} -> {model.id} at ${target / 100:,.2f}"
+                # One transaction per entry, and inserts that never overwrite, so a bot
+                # running at the same time cannot have a user's change undone.
+                with self._lock, self._conn:
+                    seen = not self._conn.execute(
+                        "INSERT OR IGNORE INTO v1_imports (user_id, model_id, imported_at) VALUES (?, ?, ?)",
+                        (int(uid), model.id, iso(utcnow())),
+                    ).rowcount
+                    if seen and not force:
+                        exists = self._conn.execute(
+                            "SELECT 1 FROM alerts WHERE user_id = ? AND model_id = ?", (int(uid), model.id)
+                        ).fetchone()
+                        report.skipped.append(
+                            f"{label}: already exists" if exists else f"{label}: removed since an earlier import"
+                        )
+                        continue
+                    cur = self._conn.execute(
+                        "INSERT INTO alerts (user_id, channel_id, model_id, target_cents, armed, created_at)"
+                        " VALUES (?, ?, ?, ?, 1, ?) ON CONFLICT (user_id, model_id) DO NOTHING",
+                        (int(uid), channel_id, model.id, target, iso(created)),
+                    )
+                    if cur.rowcount:
+                        if isinstance(last_price, (int, float)) and last_price > 0:
+                            self._conn.execute(
+                                "UPDATE alerts SET last_price_cents = ?, last_checked_at = ? WHERE id = ?",
+                                (to_cents(last_price), iso(checked or utcnow()), cur.lastrowid),
+                            )
+                        report.imported.append(done)
+                    elif force:
+                        # Only what v1 knew; the notification state stays, so a deal that
+                        # already pinged does not ping again. rev, as for any user write.
+                        self._conn.execute(
+                            "UPDATE alerts SET target_cents = ?, channel_id = ?, rev = rev + 1"
+                            " WHERE user_id = ? AND model_id = ?",
+                            (target, channel_id, int(uid), model.id),
+                        )
+                        report.updated.append(done)
+                    else:
+                        report.skipped.append(f"{label}: already exists")
         return report

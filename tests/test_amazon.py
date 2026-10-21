@@ -153,6 +153,48 @@ def test_page_info_and_states():
             amazon.parse(page, "rtx 5080")
 
 
+def _drift_all(html: str, selector: str, edit) -> str:
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup.select(selector):
+        edit(tag)
+    return str(soup)
+
+
+def _rename_class(tag, old: str, new: str) -> None:
+    tag["class"] = [new if c == old else c for c in tag.get("class", [])]
+
+
+@pytest.mark.parametrize("selector, edit, error", [
+    ("span.a-price", lambda t: _rename_class(t, "a-price", "a-price-v2"), "none of 10 cards had span.a-price"),
+    (amazon._CARD_SELECTOR, lambda t: t.attrs.pop("data-asin"), "none of 10 result cards had a data-asin"),
+    (f"{amazon._CARD_SELECTOR} h2", lambda t: t.decompose(), "none of 8 organic cards had a title"),
+], ids=["price-class-renamed", "asin-renamed", "h2-removed"])
+def test_parse_raises_when_card_markup_drifts(selector, edit, error):
+    # Layout drift must not read as a healthy EMPTY page ("cards, none organic with a price").
+    with pytest.raises(ParseError, match=error):
+        amazon.parse(_drift_all(NODE, selector, edit), "rtx 5080")
+
+
+def test_parse_cards_without_offers_are_not_drift():
+    # "No featured offers" / "See options" cards are real; with priced sponsored cards
+    # still on the page, a page of only such organic cards is EMPTY, not an error.
+    def drop_price(card):
+        if not amazon._is_sponsored(card):
+            for tag in card.select("span.a-price"):
+                tag.decompose()
+
+    assert amazon.parse(_drift_all(NODE, amazon._CARD_SELECTOR, drop_price), "rtx 5080") == []
+
+
+def test_search_card_drift_is_a_parse_error(monkeypatch):
+    drifted = _drift_all(NODE, "span.a-price", lambda t: _rename_class(t, "a-price", "a-price-v2"))
+    fake, _ = _fake_fetch([(200, drifted, {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = amazon.search("rtx 5080")
+    assert res.status is Status.PARSE_ERROR and not res.ok
+    assert "span.a-price" in res.detail
+
+
 def test_search_reads_page2_and_dedupes(monkeypatch):
     fake, calls = _fake_fetch([(200, NODE, {}), (200, NODE, {})])
     monkeypatch.setattr(http, "fetch", fake)
@@ -166,6 +208,7 @@ def test_search_reads_page2_and_dedupes(monkeypatch):
         {"k": "rtx 5080", "rh": "n:677243011", "page": "2"},
     ]
     assert "136 results reported" in res.detail
+    assert res.partial is False
 
 
 def test_search_page2_interstitial_keeps_page1(monkeypatch):
@@ -176,7 +219,7 @@ def test_search_page2_interstitial_keeps_page1(monkeypatch):
     assert len(res.listings) == 6
     assert "page 2: bot-check interstitial" in res.detail
     # exposed so the run-level breaker skips Amazon for the rest of the run
-    assert res.blocked_partway is True
+    assert res.blocked_partway is True and res.partial is True
 
 
 def test_search_page2_block_without_page1_listings_is_blocked(monkeypatch):
@@ -193,6 +236,39 @@ def test_search_page2_timeout_is_not_a_block(monkeypatch):
     res = amazon.search("rtx 5080")
     assert res.status is Status.OK and res.blocked_partway is False
     assert "page 2: Timeout" in res.detail
+    # still a partial read: the page-1 listings are no proof a page-2 deal is gone
+    assert res.partial is True
+
+
+@pytest.mark.parametrize("status, text, extra, reason", [
+    (500, "oops", {}, "page 2: HTTP 500"),
+    (200, "<html><body><div id='search'></div></body></html>", {}, "page 2: no s-search-result cards"),
+], ids=["http500", "no-cards"])
+def test_search_page2_error_marks_result_partial(monkeypatch, status, text, extra, reason):
+    fake, _ = _fake_fetch([(200, NODE, {}), (status, text, extra)])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = amazon.search("rtx 5080")
+    assert res.status is Status.OK and len(res.listings) == 6
+    assert res.partial is True and res.blocked_partway is False
+    assert reason in res.detail
+
+
+def test_search_unexpected_error_on_page2_keeps_page1(monkeypatch):
+    real_parse, pages = amazon.parse, []
+
+    def parse(payload, query):
+        pages.append(query)
+        if len(pages) == 2:
+            raise TypeError("unexpected markup")
+        return real_parse(payload, query)
+
+    fake, _ = _fake_fetch([(200, NODE, {}), (200, NODE, {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    monkeypatch.setattr(amazon, "parse", parse)
+    res = amazon.search("rtx 5080")
+    assert res.status is Status.OK and len(res.listings) == 6
+    assert res.partial is True and res.blocked_partway is False
+    assert "page 2: unexpected TypeError: unexpected markup" in res.detail
 
 
 def test_search_no_results_is_empty(monkeypatch):

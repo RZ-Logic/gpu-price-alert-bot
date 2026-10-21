@@ -99,6 +99,52 @@ def test_parse_errors():
         cc.parse('{"pagination": {}}', "rtx 5070")
 
 
+def _drift(edit) -> dict:
+    data = json.loads(PRICE_ASC)
+    for p in data["products"]:
+        edit(p)
+    return data
+
+
+@pytest.mark.parametrize("edit", [
+    lambda p: p.update(price_amount=f"${p['price_amount']:,.2f}"),
+    lambda p: p.update(price=p.pop("price_amount")),
+    lambda p: p.update(link_rewrite=p.pop("url")),
+    lambda p: p.update(product_name=p.pop("name")),
+], ids=["price-display-string", "price-renamed", "url-renamed", "name-renamed"])
+def test_parse_raises_when_no_graphics_card_row_is_usable(edit):
+    # Field drift must not read as a healthy EMPTY page ("no rows in the graphics card categories").
+    with pytest.raises(ParseError, match="none of 11 graphics card rows"):
+        cc.parse(_drift(edit), "rtx 5070")
+
+
+def test_parse_unpriced_rows_are_not_drift():
+    # price_amount 0 (coming soon) or null is a real unpriced row, not a changed layout
+    for value in (0, None):
+        assert cc.parse(_drift(lambda p: p.update(price_amount=value)), "rtx 5070") == []
+    # one drifted row among usable ones costs that row only
+    data = json.loads(PRICE_ASC)
+    data["products"][1].pop("url")
+    assert len(cc.parse(data, "rtx 5070")) == 10
+
+
+def test_search_field_drift_is_a_parse_error(monkeypatch):
+    fake, _ = _fake_fetch([(200, json.dumps(_drift(lambda p: p.update(price=p.pop("price_amount")))), {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = cc.search("rtx 5070")
+    assert res.status is Status.PARSE_ERROR and not res.ok
+    assert "none of 11 graphics card rows had a name, price and url" in res.detail
+    # graphics card rows that are all unpriced are EMPTY, and the detail says why
+    unpriced = _drift(lambda p: p.update(price_amount=0))
+    unpriced["pagination"]["pages_count"] = 1
+    fake, _ = _fake_fetch([(200, json.dumps(unpriced), {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = cc.search("rtx 5070")
+    assert res.status is Status.EMPTY
+    assert "11 graphics card rows, none with a price" in res.detail
+    assert "no rows in the graphics card categories" not in res.detail
+
+
 def test_search_reads_up_to_four_pages(monkeypatch):
     pages = [(200, _page([_row(10 * p + i, 1000.0 + p) for i in range(2)], 100, 9, p), {}) for p in range(1, 6)]
     fake, calls = _fake_fetch(pages)
@@ -113,26 +159,37 @@ def test_search_reads_up_to_four_pages(monkeypatch):
     assert "read 4 of 9 pages" in res.detail
 
 
-def test_search_stops_when_a_page_has_no_graphics_cards(monkeypatch):
+def test_search_reads_past_a_page_with_no_graphics_cards(monkeypatch):
+    # One page of laptops between two pages of cards must not end the scan.
     fake, calls = _fake_fetch([
         (200, _page([_row(1, 900.0), _row(2, 950.0)], 100, 9, 1), {}),
         (200, _page([_row(3, 2500.0, cat=103)], 100, 9, 2), {}),  # gaming laptops
-        (200, _page([_row(4, 990.0)], 100, 9, 3), {}),
+        (200, _page([_row(4, 2590.0)], 100, 9, 3), {}),
+        (200, _page([], 100, 9, 4), {}),
     ])
     monkeypatch.setattr(http, "fetch", fake)
     res = cc.search("rtx 5070")
-    assert res.status is Status.OK and len(res.listings) == 2
-    assert [c["page"] for c in calls] == ["1", "2"]
-    assert "stopped at page 2 of 9: no graphics cards left" in res.detail
-    assert "page cap" not in res.detail
-    # the server-side filter sends such a page with no products at all
+    assert res.status is Status.OK and [r.sku for r in res.listings] == ["VC1", "VC2", "VC4"]
+    assert [c["page"] for c in calls] == ["1", "2", "3", "4"]
+    assert "read 4 of 9 pages" in res.detail and "no graphics cards left" not in res.detail
+
+
+def test_search_reads_past_a_first_page_with_no_graphics_cards(monkeypatch):
+    # The server-side filter sends a page of cheap accessories with no products at all.
     fake, calls = _fake_fetch([
-        (200, _page([_row(1, 900.0)], 100, 9, 1), {}),
-        (200, _page([], 100, 9, 2), {}),
+        (200, _page([], 81, 4, 1), {}),
+        (200, _page([_row(1, 399.99)], 81, 4, 2), {}),
+        (200, _page([], 81, 4, 3), {}),
     ])
     monkeypatch.setattr(http, "fetch", fake)
-    res = cc.search("rtx 5070")
-    assert len(calls) == 2 and "no graphics cards left" in res.detail
+    res = cc.search("arc b580")
+    assert res.status is Status.OK and [r.sku for r in res.listings] == ["VC1"]
+    assert [c["page"] for c in calls] == ["1", "2", "3", "4"]
+    # no more pages than the search reports
+    fake, calls = _fake_fetch([(200, _page([], 30, 2, 1), {}), (200, _page([], 30, 2, 2), {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = cc.search("rtx 5090")
+    assert res.status is Status.EMPTY and len(calls) == 2
 
 
 def test_search_flags_page_cap_without_model_rows(monkeypatch):
@@ -165,7 +222,7 @@ def test_search_block_on_later_page_is_flagged(monkeypatch):
     monkeypatch.setattr(http, "fetch", fake)
     res = cc.search("rtx 5070")
     assert res.status is Status.OK and len(res.listings) == 1
-    assert res.blocked_partway is True
+    assert res.blocked_partway is True and res.partial is True
     assert "page 2: HTTP 403" in res.detail
     # with nothing usable from page 1 the result is BLOCKED
     fake, _ = _fake_fetch([
@@ -187,6 +244,44 @@ def test_search_stops_at_last_page_and_keeps_partial(monkeypatch):
     assert res.status is Status.OK and len(res.listings) == 1
     assert "page 2: Timeout" in res.detail
     assert res.blocked_partway is False
+    assert res.partial is True
+
+
+@pytest.mark.parametrize("status, text, extra, reason, blocked", [
+    (None, "", {"error": "Timeout: 30 s"}, "page 2: Timeout: 30 s", False),
+    (500, "oops", {}, "page 2: HTTP 500", False),
+    (429, "slow down", {"blocked_reason": "HTTP 429"}, "page 2: HTTP 429", True),
+    (200, "<html>maintenance</html>", {}, "page 2: response is not JSON", False),
+], ids=["timeout", "http500", "http429", "not-json"])
+def test_search_later_page_failure_marks_result_partial(monkeypatch, status, text, extra, reason, blocked):
+    # Any later-page failure leaves a partial read, but only a block trips the run breaker.
+    fake, _ = _fake_fetch([(200, _page([_row(1, 900.0)], 30, 3), {}), (status, text, extra)])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = cc.search("rtx 5070")
+    assert res.status is Status.OK and [r.sku for r in res.listings] == ["VC1"]
+    assert res.partial is True
+    assert res.blocked_partway is blocked
+    assert reason in res.detail
+    # a complete read is not partial
+    fake, _ = _fake_fetch([(200, _page([_row(1, 900.0)], 1, 1), {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    assert cc.search("rtx 5070").partial is False
+
+
+def test_search_unexpected_error_on_later_page_keeps_earlier_pages(monkeypatch):
+    bad = dict(_row(2, 950.0), stock_availability="Online - Available to Ship")  # str, not an object
+    fake, _ = _fake_fetch([(200, _page([_row(1, 900.0)], 30, 3), {}), (200, _page([bad], 30, 3, 2), {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = cc.search("rtx 5070")
+    assert res.status is Status.OK and [r.sku for r in res.listings] == ["VC1"]
+    assert res.partial is True and res.blocked_partway is False
+    assert "page 2: unexpected AttributeError" in res.detail
+    # the same row on page 1 is still a parse error
+    fake, _ = _fake_fetch([(200, _page([bad], 30, 3), {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = cc.search("rtx 5070")
+    assert res.status is Status.PARSE_ERROR and res.listings == []
+    assert "AttributeError" in res.detail
 
 
 def test_search_only_non_gpu_rows_is_empty(monkeypatch):

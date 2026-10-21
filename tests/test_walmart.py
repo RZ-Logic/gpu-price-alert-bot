@@ -122,11 +122,91 @@ def test_condition_and_stock_flags():
     assert rows[0].url == "https://www.walmart.ca/en/ip/x/X1"
 
 
+@pytest.mark.parametrize("seller_type, seller, first_party", [
+    ("EXTERNAL", "Newegg Canada Inc.", False),   # every captured GPU row
+    ("INTERNAL", "Walmart", True),
+    ("external", "Newegg Canada Inc.", False),
+    ("MARKETPLACE", "Newegg Canada Inc.", False),  # unknown value: decided by the seller name
+    ("SELLER", "Walmart.ca", True),
+    ("MARKETPLACE", None, None),
+    (None, "stricklands distribution inc.", False),
+    (None, None, None),
+], ids=["external", "internal", "lowercase", "unknown-reseller", "unknown-walmart", "unknown-no-name",
+        "missing-type", "missing-both"])
+def test_seller_type_only_known_values_decide_first_party(seller_type, seller, first_party):
+    # Any sellerType other than "EXTERNAL" used to count as sold by Walmart, letting
+    # marketplace offers past a default alert after a schema change.
+    item = {
+        "__typename": "Product", "usItemId": "S", "name": "RTX 5080 card", "price": 2369.99,
+        "canonicalUrl": "/en/ip/s/S", "catalogProductType": "Computer Video Cards",
+        "sellerType": seller_type, "sellerName": seller,
+    }
+    assert walmart.parse(_page([item]), "rtx 5080")[0].first_party is first_party
+
+
 def test_parse_errors():
     with pytest.raises(ParseError):
         walmart.parse("<html><body>no data</body></html>", "rtx 5070")
     with pytest.raises(ParseError):
         walmart.parse('{"props": {"pageProps": {}}}', "rtx 5070")
+
+
+def _drift(edit) -> dict:
+    data = json.loads(AUDIT_JSON)
+    for stack in walmart._search_result(data)["itemStacks"]:
+        for item in stack["items"]:
+            edit(item)
+    return data
+
+
+@pytest.mark.parametrize("edit, error", [
+    (lambda i: (i.pop("price"), i["priceInfo"].pop("linePrice")), "none of 6 graphics card rows had"),
+    (lambda i: i.update(canonicalUrl=None), "none of 6 graphics card rows had"),
+    (lambda i: i.update(__typename="SearchProduct"), "results reported but no Product items"),
+], ids=["price-renamed", "url-missing", "typename-renamed"])
+def test_parse_raises_when_no_row_is_usable(edit, error):
+    # Field drift must not read as a healthy EMPTY page.
+    data = _drift(edit)
+    walmart._search_result(data)["itemStacks"][0]["count"] = 6
+    with pytest.raises(ParseError, match=error):
+        walmart.parse(data, "rtx 5080")
+
+
+def test_parse_ad_placeholders_and_category_rejects_are_not_drift():
+    # The live page mixes an AdPlaceholder into the Product items; that is not drift.
+    assert len(walmart.parse(SEARCH_HTML, "rtx 5070")) == 6
+    boards = _drift(lambda i: i.update(catalogProductType="Motherboards"))
+    walmart._search_result(boards)["itemStacks"][0]["count"] = 6
+    assert walmart.parse(boards, "rtx 5080") == []
+    assert walmart.parse(_page([], count=0), "arc b580") == []
+
+
+def test_search_field_drift_is_a_parse_error(monkeypatch):
+    drifted = _page([{
+        "__typename": "Product", "usItemId": "A", "name": "RTX 5070 card", "salePrice": 999.0,
+        "canonicalUrl": "/en/ip/a/A", "catalogProductType": "Computer Video Cards",
+    }], count=27)
+    fake, _ = _fake_fetch([(200, drifted, {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = walmart.search("rtx 5070")
+    assert res.status is Status.PARSE_ERROR and not res.ok
+    assert "none of 1 graphics card rows had a name, price and url" in res.detail
+
+
+def test_search_category_rejects_name_the_cause(monkeypatch):
+    board = {
+        "__typename": "Product", "usItemId": "M", "name": "B850 motherboard", "price": 299.0,
+        "canonicalUrl": "/en/ip/m/M", "catalogProductType": "Motherboards",
+    }
+    fake, _ = _fake_fetch([(200, _page([board]), {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = walmart.search("rtx 5070")
+    assert res.status is Status.EMPTY and "1 rows, none in the graphics card category" in res.detail
+    fake, _ = _fake_fetch([(200, _page([], count=0), {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = walmart.search("arc b580")
+    assert res.status is Status.EMPTY and "no results" in res.detail
+    assert "none in the graphics card category" not in res.detail
 
 
 def test_search_reads_page_two_and_dedupes(monkeypatch):
@@ -147,7 +227,46 @@ def test_search_reads_page_two_and_dedupes(monkeypatch):
     assert calls[0]["q"] == "rtx 5070 graphics card"
     assert [r.sku for r in res.listings] == ["A", "B"]
     assert res.n_raw == 3 and res.http_status == 200
-    assert res.blocked_partway is False
+    assert res.blocked_partway is False and res.partial is False
+
+
+@pytest.mark.parametrize("status, text, extra, reason", [
+    (None, "", {"error": "Timeout: 30 s"}, "page 2: Timeout: 30 s"),
+    (502, "bad gateway", {}, "page 2: HTTP 502"),
+    (200, "<html>" + "x" * 60_000 + "</html>", {}, "page 2: no script#__NEXT_DATA__ in page"),
+], ids=["timeout", "http502", "no-next-data"])
+def test_search_page_two_error_marks_result_partial(monkeypatch, status, text, extra, reason):
+    # Not a block, so the run breaker is left alone, but the read is still partial.
+    gpu = {
+        "__typename": "Product", "usItemId": "A", "name": "RTX 5070 card", "price": 999.0,
+        "canonicalUrl": "/en/ip/a/A", "catalogProductType": "Computer Video Cards",
+    }
+    fake, _ = _fake_fetch([(200, _page([gpu], count=41), {}), (status, text, extra)])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = walmart.search("rtx 5070")
+    assert res.status is Status.OK and [r.sku for r in res.listings] == ["A"]
+    assert res.partial is True and res.blocked_partway is False
+    assert reason in res.detail
+
+
+def test_search_unexpected_error_on_page_two_keeps_page_one(monkeypatch):
+    gpu = {
+        "__typename": "Product", "usItemId": "A", "name": "RTX 5070 card", "price": 999.0,
+        "canonicalUrl": "/en/ip/a/A", "catalogProductType": "Computer Video Cards",
+    }
+    bad = dict(gpu, usItemId="B", canonicalUrl="/en/ip/b/B", priceInfo=["$15.00"])  # list, not an object
+    fake, _ = _fake_fetch([(200, _page([gpu], count=41), {}), (200, _page([bad], count=41), {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = walmart.search("rtx 5070")
+    assert res.status is Status.OK and [r.sku for r in res.listings] == ["A"]
+    assert res.partial is True and res.blocked_partway is False
+    assert "page 2: unexpected AttributeError" in res.detail
+    # the same row on page 1 is still a parse error
+    fake, _ = _fake_fetch([(200, _page([bad], count=41), {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = walmart.search("rtx 5070")
+    assert res.status is Status.PARSE_ERROR and res.listings == []
+    assert "AttributeError" in res.detail
 
 
 def test_search_page_two_block_is_flagged(monkeypatch):
@@ -163,6 +282,7 @@ def test_search_page_two_block_is_flagged(monkeypatch):
     res = walmart.search("rtx 5070")
     assert res.status is Status.OK and [r.sku for r in res.listings] == ["A"]
     assert res.blocked_partway is True and "page 2: bot-check page" in res.detail
+    assert res.partial is True
     # nothing usable on page 1: the result is BLOCKED
     board = dict(gpu, catalogProductType="Motherboards")
     fake, _ = _fake_fetch([

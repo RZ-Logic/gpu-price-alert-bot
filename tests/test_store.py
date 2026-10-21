@@ -1,5 +1,6 @@
 import json
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 import pytest
@@ -79,20 +80,31 @@ def test_state_write_never_resurrects_or_clobbers(store):
     assert store.all_alerts() == []
 
 
-def test_concurrent_writers_from_threads(store):
-    def worker(uid):
-        for i in range(20):
-            store.upsert_alert(uid, f"m{i % 5}", 100_000 + i)
-            if i % 3 == 0:
-                store.remove_alert(uid, f"m{(i + 1) % 5}")
+def _alert_writes(store, uid):
+    for i in range(20):
+        store.upsert_alert(uid, f"m{i % 5}", 100_000 + i)
+        if i % 3 == 0:
+            store.remove_alert(uid, f"m{(i + 1) % 5}")
 
-    threads = [threading.Thread(target=worker, args=(u,)) for u in range(8)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
+
+def test_concurrent_writers_from_threads(store):
+    start = threading.Barrier(8, timeout=30)
+
+    def worker(uid):
+        start.wait()   # all eight write at once
+        _alert_writes(store, uid)
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = [pool.submit(worker, uid) for uid in range(8)]
+    for f in futures:
+        f.result()   # a write that raised in its thread fails the test here
+    # Each user's rows end as that user's writes leave them with nothing else running.
+    with Store() as alone:
+        _alert_writes(alone, 0)
+        expected = [(a.model_id, a.target_cents, a.armed) for a in alone.list_alerts(0)]
+    assert len(expected) == 5
     for uid in range(8):
-        assert len(store.list_alerts(uid)) <= 5
+        assert [(a.model_id, a.target_cents, a.armed) for a in store.list_alerts(uid)] == expected
 
 
 def _scan(store, model_id, prices, at, **kw):
@@ -164,6 +176,26 @@ def test_never_ok_retailer_counts_all_failures(store):
     assert h.consecutive_failures == 4 and h.last_ok_at is None and h.last_http_status == 503
 
 
+def test_retailer_health_is_not_cut_short_by_a_prune(store, monkeypatch):
+    # Walmart's only run is older than the retention, so the daily prune removes it.
+    store.record_runs([ScrapeResult("walmart", "q", Status.OK)], at=utcnow() - timedelta(days=200))
+    pruner = threading.Thread(target=store.prune, args=(180,))
+    real = store._query
+
+    def query(sql, params=()):
+        rows = real(sql, params)
+        if "DISTINCT" in sql and pruner.ident is None:
+            # The background loop prunes from another thread right after the retailers are listed.
+            pruner.start()
+            pruner.join(timeout=0.3)
+        return rows
+
+    monkeypatch.setattr(store, "_query", query)
+    assert [h.retailer for h in store.retailer_health()] == ["walmart"]
+    pruner.join()
+    assert store.retailer_health() == []
+
+
 def test_prune(store):
     now = utcnow()
     old = _scan(store, "rtx-5080", [1500, 1400], now - timedelta(days=200))
@@ -198,6 +230,93 @@ def test_import_v1(store, tmp_path):
     # Importing twice does not duplicate.
     store.import_v1(path)
     assert len(store.all_alerts()) == 2
+
+
+def _v1_file(tmp_path, entries=None):
+    path = tmp_path / "gpu_alerts.json"
+    path.write_text(json.dumps({"111": entries or {
+        "RTX 5080": {"target": 1500, "channel_id": 555, "last_price": 1699.0},
+        "RTX 5090": {"target": 3000, "channel_id": 555},
+    }}), encoding="utf-8")
+    return path
+
+
+def _changed_and_pinged(store):
+    """User 111 re-sets the RTX 5080 alert in Discord, and it pings at $1,250."""
+    a, _ = store.upsert_alert(111, "rtx-5080", 130_000, channel_id=777, guild_id=1,
+                              include_open_box=True, include_marketplace=True)
+    assert store.update_alert_state(a.id, armed=False, notified_price_cents=125_000, notified_at=utcnow(),
+                                    last_price_cents=125_000, notified_retailer="bestbuy",
+                                    holding_retailers={"bestbuy"}, expected_rev=a.rev)
+    return store.get_alert(a.id)
+
+
+def test_import_v1_again_leaves_existing_alerts_alone(store, tmp_path):
+    path = _v1_file(tmp_path)
+    assert len(store.import_v1(path).imported) == 2
+    before = _changed_and_pinged(store)
+    report = store.import_v1(path)
+    assert report.imported == [] and report.updated == []
+    assert sorted(report.skipped) == ["111 RTX 5080: already exists", "111 RTX 5090: already exists"]
+    # The target, channel and flags the user set stay, and the alert is not re-armed to ping again.
+    assert store.get_alert(before.id) == before
+
+
+def test_import_v1_again_does_not_bring_back_a_removed_alert(store, tmp_path):
+    path = _v1_file(tmp_path)
+    store.import_v1(path)
+    store.remove_alert(111, "rtx-5090")
+    report = store.import_v1(path)
+    assert "111 RTX 5090: removed since an earlier import" in report.skipped
+    assert [a.model_id for a in store.list_alerts(111)] == ["rtx-5080"]
+
+
+def test_import_v1_does_not_overwrite_an_alert_made_in_discord(store, tmp_path):
+    before = _changed_and_pinged(store)
+    report = store.import_v1(_v1_file(tmp_path))
+    assert report.skipped == ["111 RTX 5080: already exists"] and len(report.imported) == 1
+    assert store.get_alert(before.id) == before   # not even the stale v1 last price
+
+
+def test_import_v1_force_applies_the_file_but_keeps_the_ping_state(store, tmp_path):
+    path = _v1_file(tmp_path)
+    store.import_v1(path)
+    store.remove_alert(111, "rtx-5090")
+    before = _changed_and_pinged(store)
+    report = store.import_v1(path, force=True)
+    assert report.updated == ["111 RTX 5080 -> rtx-5080 at $1,500.00"] and len(report.imported) == 1
+    after = store.get_alert(before.id)
+    assert (after.target_cents, after.channel_id) == (150_000, 555)
+    # Whether it already pinged, and the settings v1 never had, stay as they were.
+    assert (after.armed, after.notified_price_cents, after.notified_at, after.notified_retailer) == (
+        before.armed, before.notified_price_cents, before.notified_at, before.notified_retailer)
+    assert (after.holding_retailers, after.last_price_cents) == (before.holding_retailers, before.last_price_cents)
+    assert (after.guild_id, after.include_open_box, after.include_marketplace) == (1, True, True)
+    assert after.rev == before.rev + 1   # a check that read the old target does not write over it
+    assert {a.model_id for a in store.list_alerts(111)} == {"rtx-5080", "rtx-5090"}
+
+
+def test_import_v1_into_a_v2_0_database(tmp_path):
+    import sqlite3
+
+    path = tmp_path / "v2.0.sqlite3"
+    conn = sqlite3.connect(path)
+    conn.execute(V2_0_ALERTS)
+    conn.execute("INSERT INTO alerts (user_id, model_id, target_cents, armed, notified_price_cents, created_at)"
+                 " VALUES (111, 'rtx-5080', 130000, 0, 125000, '2026-10-01T00:00:00.000000+00:00')")
+    conn.commit()
+    conn.close()
+    v1 = _v1_file(tmp_path)
+    with Store(path) as s:
+        report = s.import_v1(v1)
+        assert report.skipped == ["111 RTX 5080: already exists"] and len(report.imported) == 1
+        (a,) = [x for x in s.all_alerts() if x.model_id == "rtx-5080"]
+        assert (a.target_cents, a.armed, a.notified_price_cents) == (130_000, False, 125_000)
+        s.remove_alert(111, "rtx-5080")
+    with Store(path) as s:   # the record of what was imported survives a restart
+        assert s.import_v1(v1).skipped == ["111 RTX 5080: removed since an earlier import",
+                                           "111 RTX 5090: already exists"]
+        assert [a.model_id for a in s.all_alerts()] == ["rtx-5090"]
 
 
 def test_memory_store():
@@ -240,6 +359,62 @@ def test_state_write_after_a_same_target_rearm_is_skipped(store):
     assert store.upsert_alert(1, "rtx-5080", 150_000)[0].notified_retailer is None
 
 
+def test_state_writes_skip_a_reused_id(store):
+    a, _ = store.upsert_alert(1, "rtx-5080", 150_000)
+    # The newest alert is removed and the next /alert, by anyone, gets the same id.
+    store.remove_alert(1, "rtx-5080")
+    b, _ = store.upsert_alert(2, "rtx-5090", 150_000)
+    assert b.id == a.id and b.rev == a.rev
+    assert not store.update_alert_state(
+        a.id, armed=False, notified_price_cents=140_000, notified_at=utcnow(), last_price_cents=140_000,
+        expected_target_cents=a.target_cents, expected_rev=a.rev,
+        expected_user_id=a.user_id, expected_model_id=a.model_id,
+    )
+    store.touch_alert(a.id, 140_000, expected_user_id=a.user_id, expected_model_id=a.model_id)
+    fresh = store.get_alert(b.id)
+    assert fresh.armed and fresh.notified_price_cents is None and fresh.last_price_cents is None
+    assert store.update_alert_state(
+        b.id, armed=False, notified_price_cents=290_000, notified_at=utcnow(), last_price_cents=290_000,
+        expected_user_id=b.user_id, expected_model_id=b.model_id,
+    )
+
+
+def test_undo_notification_only_undoes_that_notification(store):
+    a, _ = store.upsert_alert(1, "rtx-5080", 150_000)
+
+    def notify(price):
+        assert store.update_alert_state(a.id, armed=False, notified_price_cents=price, notified_at=utcnow(),
+                                        last_price_cents=price, notified_retailer="bestbuy",
+                                        holding_retailers={"bestbuy"})
+
+    notify(140_000)
+    assert store.undo_notification(a, 140_000)
+    b = store.get_alert(a.id)
+    assert b.armed and (b.notified_price_cents, b.notified_at, b.notified_retailer) == (None, None, None)
+    assert b.last_price_cents == 140_000 and b.holding_retailers == {"bestbuy"}   # what was seen stays
+    notify(140_000)
+    notify(135_000)   # a later check notified again: that one reached the user
+    assert not store.undo_notification(a, 140_000)
+    store.upsert_alert(1, "rtx-5080", 150_000)   # the user re-set the alert
+    assert not store.undo_notification(a, 135_000)
+
+
+def test_state_write_from_an_older_scan_is_skipped(store):
+    a, _ = store.upsert_alert(1, "rtx-5080", 150_000)
+    now = utcnow()
+
+    def write(price, observed_at):
+        return store.update_alert_state(a.id, armed=True, notified_price_cents=None, notified_at=None,
+                                        last_price_cents=price, observed_at=observed_at)
+
+    assert write(160_000, now)
+    assert not write(140_000, now - timedelta(minutes=1))   # read before the scan already saved
+    assert not write(140_000, now)                          # the same scan again
+    a = store.get_alert(a.id)
+    assert a.last_price_cents == 160_000 and a.observed_at == now
+    assert write(150_000, now + timedelta(minutes=1))
+
+
 def test_old_database_gets_the_new_columns(tmp_path):
     import sqlite3
 
@@ -260,3 +435,62 @@ def test_old_database_gets_the_new_columns(tmp_path):
         (a,) = s.all_alerts()
         assert (a.above_streak, a.notified_retailer, a.rev) == (0, None, 0)
         assert a.notified_price_cents == 140_000 and not a.armed
+        assert a.holding_retailers == frozenset() and a.held_streak == 0
+
+
+# The alerts table as v2.0.0 created it.
+V2_0_ALERTS = """
+CREATE TABLE alerts (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    channel_id INTEGER,
+    guild_id INTEGER,
+    model_id TEXT NOT NULL,
+    target_cents INTEGER NOT NULL CHECK (target_cents > 0),
+    include_open_box INTEGER NOT NULL DEFAULT 0,
+    include_marketplace INTEGER NOT NULL DEFAULT 0,
+    armed INTEGER NOT NULL DEFAULT 1,
+    notified_price_cents INTEGER,
+    notified_at TEXT,
+    above_streak INTEGER NOT NULL DEFAULT 0,
+    notified_retailer TEXT,
+    rev INTEGER NOT NULL DEFAULT 0,
+    last_price_cents INTEGER,
+    last_checked_at TEXT,
+    created_at TEXT NOT NULL,
+    UNIQUE (user_id, model_id)
+)
+"""
+
+
+def test_v2_0_database_is_migrated_in_place(tmp_path):
+    import sqlite3
+
+    path = tmp_path / "v2.0.sqlite3"
+    conn = sqlite3.connect(path)
+    conn.execute(V2_0_ALERTS)
+    conn.execute("INSERT INTO alerts (user_id, model_id, target_cents, armed, notified_price_cents,"
+                 " notified_retailer, above_streak, rev, created_at)"
+                 " VALUES (1, 'rtx-5080', 150000, 0, 140000, 'bestbuy', 1, 3, '2026-10-01T00:00:00.000000+00:00')")
+    conn.execute("INSERT INTO alerts (user_id, model_id, target_cents, created_at)"
+                 " VALUES (1, 'rtx-5090', 250000, '2026-10-02T00:00:00.000000+00:00')")
+    conn.commit()
+    conn.close()
+    with Store(path) as s:
+        notified, armed = s.all_alerts()
+        # The retailer that had the notified deal keeps holding the alert after the upgrade.
+        assert notified.holding_retailers == {"bestbuy"} and armed.holding_retailers == frozenset()
+        assert (notified.notified_price_cents, notified.above_streak, notified.rev) == (140_000, 1, 3)
+        assert notified.observed_at is None and armed.observed_at is None
+        assert notified.held_streak == 0 and armed.held_streak == 0
+        assert s.update_alert_state(
+            notified.id, armed=False, notified_price_cents=140_000, notified_at=utcnow(),
+            last_price_cents=145_000, holding_retailers={"newegg", "amazon"}, held_streak=5, expected_rev=3,
+        )
+        saved = s.get_alert(notified.id)
+        assert saved.holding_retailers == {"amazon", "newegg"} and saved.held_streak == 5
+        # Re-setting the alert re-arms it and empties the set.
+        reset = s.upsert_alert(1, "rtx-5080", 150_000)[0]
+        assert reset.holding_retailers == frozenset() and reset.held_streak == 0
+    with Store(path) as s:   # opening again changes nothing
+        assert [a.holding_retailers for a in s.all_alerts()] == [frozenset(), frozenset()]

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from gpu_alerts import catalog, pricing
 from gpu_alerts.retailers import bestbuy
 from gpu_alerts.retailers.base import ParseError, Status
 from gpu_alerts.retailers.http import FetchResult
@@ -159,6 +160,62 @@ def test_search_fails_when_availability_fails(monkeypatch, availability, status)
     assert r.listings == []
     assert not r.ok
     assert "availability" in r.detail
+
+
+def _availability(edit) -> str:
+    doc = json.loads(_text("bestbuy_availability_rtx5070ti.json"))
+    edit(doc)
+    return json.dumps(doc)
+
+
+def _search_with_availability(monkeypatch, availability: str):
+    _fake_fetch(monkeypatch, _ok(_text("bestbuy_search_rtx5070ti.json")), _ok(availability))
+    return bestbuy.search("rtx 5070 ti")
+
+
+def _drop_sku(sku):
+    return lambda doc: doc.update(availabilities=[a for a in doc["availabilities"] if a["sku"] != sku])
+
+
+def _rename_sold_out(doc):
+    for row in doc["availabilities"]:
+        if row["shipping"]["status"] == "SoldOutOnline":
+            row["shipping"]["status"] = "SoldOut"
+            row["shipping"].pop("purchasable")
+
+
+@pytest.mark.parametrize("edit, unknown", [
+    (_drop_sku("19183868"), 1),
+    (lambda doc: [a.update(shipping={}) for a in doc["availabilities"] if a["sku"] == "19183868"], 1),
+    (_rename_sold_out, 13),
+], ids=["sku-left-out", "no-shipping-data", "status-renamed"])
+def test_search_unanswered_skus_count_as_sold_out(monkeypatch, edit, unknown):
+    # The module promises fail-closed stock: a SKU the availability API did not
+    # answer must not become a stock-unknown offer that beats the in-stock cards.
+    r = _search_with_availability(monkeypatch, _availability(edit))
+    assert r.status is Status.OK and len(r.listings) == 40
+    assert all(l.in_stock is not None for l in r.listings)
+    assert _by_sku(r.listings)["19183868"].in_stock is False
+    assert f"{unknown} stock unknown, counted as sold out" in r.detail
+    assert r.partial is True  # the unanswered SKUs may still be the deal
+    best = pricing.best(catalog.by_id("rtx-5070-ti"), [r])
+    assert (best.sku, best.price, best.in_stock) == ("19358759", 1689.99, True)
+
+
+@pytest.mark.parametrize("edit", [
+    lambda doc: doc.update(availabilities=[]),
+    lambda doc: [row.update(skuId=row.pop("sku")) for row in doc["availabilities"]],
+    lambda doc: [row.update(ship=row.pop("shipping")) for row in doc["availabilities"]],
+], ids=["empty-list", "sku-renamed", "shipping-renamed"])
+def test_search_fails_when_no_sku_got_a_stock_answer(monkeypatch, edit):
+    r = _search_with_availability(monkeypatch, _availability(edit))
+    assert r.status is Status.PARSE_ERROR and r.listings == [] and not r.ok
+    assert "availability: no usable stock status for any of 40 SKUs" in r.detail
+
+
+def test_search_complete_availability_is_not_partial(monkeypatch):
+    r = _search_with_availability(monkeypatch, _text("bestbuy_availability_rtx5070ti.json"))
+    assert r.status is Status.OK and r.partial is False
 
 
 @pytest.mark.parametrize("response, status", [

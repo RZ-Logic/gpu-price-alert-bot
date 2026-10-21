@@ -2,3 +2,6 @@
 discord.py==2.7.1
 curl_cffi==0.16.3
 beautifulsoup4==4.15.0
+# Not imported directly: curl_cffi checks retailer certificates against certifi's CA bundle.
+# Floored for GHSA-6q48-6c7w-9gw2 (compromised emSign intermediates).
+certifi>=2026.10.19

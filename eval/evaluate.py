@@ -11,12 +11,17 @@ or null) and a label field. Positive class: label "correct". Rows labelled
 "unknown" or "unsure" are excluded and counted. Every other label,
 "correct_bundle" included, is negative. Per-query precision on fewer than 5
 accepted rows is reported but flagged too small to judge and is not a target
-miss (Addendum 2). See eval/README.md and eval/PREREGISTRATION.md.
+miss (Addendum 2). A pre-registered query with no scored rows in the file is
+listed as not assessed; it is not a miss either, so "all met" then says for how
+many of the 8 queries the file has scored rows. Next to each precision, Plow is its one-sided 95%
+exact (Clopper-Pearson) lower bound, for reading small cells; it is reported,
+not a target. See eval/README.md and eval/PREREGISTRATION.md.
 """
 
 import argparse
 import dataclasses
 import json
+import math
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -41,6 +46,45 @@ TARGET_RECALL = 0.90
 TARGET_PER_QUERY_PRECISION = 0.90
 MIN_ACCEPTED_TO_JUDGE = 5      # Addendum 2: fewer accepted rows per query is too small to judge
 TOO_SMALL = "too small to judge"
+PREREGISTERED_QUERIES = ("RTX 5090", "RTX 5080", "RTX 5070 TI", "RTX 5070", "RTX 5060 TI",
+                         "RX 9070 XT", "RX 9070", "ARC B580")
+NOT_ASSESSED = "not assessed"
+LOWER_BOUND_CONFIDENCE = 0.95  # for Plow, which is reported, not a target
+
+
+def _at_least(k: int, n: int, p: float) -> float:
+    """P(X >= k) for X ~ Binomial(n, p) with 0 < p < 1, summed in log space."""
+    log_p, log_q = math.log(p), math.log1p(-p)
+    log_n = math.lgamma(n + 1)
+    return sum(
+        math.exp(log_n - math.lgamma(i + 1) - math.lgamma(n - i + 1) + i * log_p + (n - i) * log_q)
+        for i in range(k, n + 1)
+    )
+
+
+def precision_lower_bound(tp: int, accepted: int, confidence: float = LOWER_BOUND_CONFIDENCE) -> float | None:
+    """One-sided exact (Clopper-Pearson) lower confidence bound on precision.
+
+    The lowest true precision under which tp or more of the accepted rows would be
+    correct with probability at least 1 - confidence. With no false positives it is
+    (1 - confidence) ** (1 / accepted): 0.652 for 7 of 7, and 29 of 29 are needed
+    to reach 0.90. None when nothing was accepted.
+    """
+    if accepted <= 0:
+        return None
+    alpha = 1.0 - confidence
+    if tp <= 0:
+        return 0.0
+    if tp >= accepted:
+        return alpha ** (1.0 / accepted)
+    lo, hi = 0.0, 1.0
+    for _ in range(60):   # P(X >= tp) rises with p; bisect for the p where it equals alpha
+        mid = (lo + hi) / 2
+        if _at_least(tp, accepted, mid) < alpha:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2
 
 
 @dataclass
@@ -63,6 +107,10 @@ class Counts:
     @property
     def precision(self) -> float | None:
         return self.tp / (self.tp + self.fp) if self.tp + self.fp else None
+
+    @property
+    def precision_lower(self) -> float | None:
+        return precision_lower_bound(self.tp, self.tp + self.fp)
 
     @property
     def recall(self) -> float | None:
@@ -176,13 +224,13 @@ def _price_key(item: dict) -> float:
 def print_report(r: Report, top: int) -> None:
     c = r.overall
     print(f"== {r.name} ==")
-    print(f"overall  P {_fmt(c.precision)}  R {_fmt(c.recall)}  F1 {_fmt(c.f1)}  "
-          f"TP {c.tp}  FP {c.fp}  FN {c.fn}  TN {c.tn}")
-    print(f"{'query':<14}{'P':>7}{'R':>7}{'F1':>7}{'TP':>5}{'FP':>5}{'FN':>5}{'TN':>5}")
+    print(f"overall  P {_fmt(c.precision)}  Plow {_fmt(c.precision_lower)}  R {_fmt(c.recall)}  "
+          f"F1 {_fmt(c.f1)}  TP {c.tp}  FP {c.fp}  FN {c.fn}  TN {c.tn}")
+    print(f"{'query':<14}{'P':>7}{'Plow':>7}{'R':>7}{'F1':>7}{'TP':>5}{'FP':>5}{'FN':>5}{'TN':>5}")
     for q in sorted(r.per_query):
         k = r.per_query[q]
         flag = f"  ({TOO_SMALL}: {k.tp + k.fp} accepted)" if too_small(k) else ""
-        print(f"{q:<14}{_fmt(k.precision):>7}{_fmt(k.recall):>7}{_fmt(k.f1):>7}"
+        print(f"{q:<14}{_fmt(k.precision):>7}{_fmt(k.precision_lower):>7}{_fmt(k.recall):>7}{_fmt(k.f1):>7}"
               f"{k.tp:>5}{k.fp:>5}{k.fn:>5}{k.tn:>5}{flag}")
     for name, items in (("false positives (cheapest first)", r.false_positives),
                         ("false negatives (cheapest first)", r.false_negatives)):
@@ -200,6 +248,11 @@ def too_small(k: Counts) -> bool:
 
 def too_small_queries(r: Report) -> list[str]:
     return [q for q, k in sorted(r.per_query.items()) if too_small(k)]
+
+
+def absent_queries(r: Report) -> list[str]:
+    """Pre-registered queries with no scored row in the file (absent, or every row excluded)."""
+    return [q for q in PREREGISTERED_QUERIES if q not in r.per_query]
 
 
 def check_targets(r: Report) -> list[str]:
@@ -221,8 +274,8 @@ def check_targets(r: Report) -> list[str]:
 
 def to_json(r: Report) -> dict:
     def counts(k: Counts) -> dict:
-        return {"precision": k.precision, "recall": k.recall, "f1": k.f1,
-                "tp": k.tp, "fp": k.fp, "fn": k.fn, "tn": k.tn}
+        return {"precision": k.precision, "precision_lower_95": k.precision_lower,
+                "recall": k.recall, "f1": k.f1, "tp": k.tp, "fp": k.fp, "fn": k.fn, "tn": k.tn}
 
     def per_query(k: Counts) -> dict:
         return {**counts(k), "too_small_to_judge": too_small(k)}
@@ -253,21 +306,35 @@ def main(argv: list[str] | None = None) -> int:
     v1, v2 = evaluate(rows, args.label_field)
     print(f"{args.path}: {len(rows)} rows scored, {excluded} excluded as unknown or unsure, "
           f"label field {args.label_field!r}"
-          + (f", {len(disputes)} disputed labels applied from {args.disputes}" if disputes else "") + "\n")
+          + (f", {len(disputes)} disputed labels applied from {args.disputes}" if disputes else ""))
+    print(f"Plow: one-sided {LOWER_BOUND_CONFIDENCE:.0%} exact (Clopper-Pearson) lower bound on precision, "
+          "from TP of the TP + FP accepted rows\n")
     print_report(v1, args.top)
     print_report(v2, args.top)
 
     misses = check_targets(v2)
     small = too_small_queries(v2)
-    print("pre-registered targets (v2): " + ("all met" if not misses else "; ".join(misses)))
+    absent = absent_queries(v2)
+    n_queries = len(PREREGISTERED_QUERIES)
+    if misses:
+        summary = "; ".join(misses)
+    elif absent:
+        summary = (f"all met, but this file has scored rows for only {n_queries - len(absent)} "
+                   f"of the {n_queries} pre-registered queries")
+    else:
+        summary = "all met"
+    print("pre-registered targets (v2): " + summary)
     if small:
         print(f"per-query precision {TOO_SMALL} (fewer than {MIN_ACCEPTED_TO_JUDGE} accepted rows, "
               f"not counted as a miss): " + ", ".join(small))
+    if absent:
+        print(f"pre-registered queries {NOT_ASSESSED} (no scored rows in this file, not counted as a miss): "
+              + ", ".join(absent))
     if args.json_out:
         args.json_out.write_text(json.dumps(
             {"path": str(args.path), "rows": len(rows), "excluded_unknown": excluded,
              "v1": to_json(v1), "v2": to_json(v2), "target_misses": misses,
-             "too_small_to_judge": small}, indent=2), encoding="utf-8")
+             "too_small_to_judge": small, "not_assessed": absent}, indent=2), encoding="utf-8")
     return 1 if args.check and misses else 0
 
 

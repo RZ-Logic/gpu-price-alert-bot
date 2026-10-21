@@ -180,6 +180,21 @@ def test_scan_models_skips_a_retailer_blocked_on_a_later_page():
     assert asked == [["bestbuy", "amazon"], ["bestbuy"]]
 
 
+def test_scan_models_keeps_a_retailer_whose_later_page_timed_out():
+    # A partial read without a block (timeout, HTTP or parse error on page 2) must not
+    # skip the retailer for the rest of the run; only block evidence trips the breaker.
+    asked = []
+
+    def scanner(query, retailer_ids):
+        asked.append(list(retailer_ids))
+        return [ScrapeResult(rid, query, Status.OK, partial=(rid == "amazon")) for rid in retailer_ids]
+
+    models = [catalog.by_id(i) for i in ("rtx-5080", "rtx-5070")]
+    scans = pricing.scan_models(models, ["bestbuy", "amazon"], scanner=scanner)
+    assert asked == [["bestbuy", "amazon"], ["bestbuy", "amazon"]]
+    assert scans["rtx-5080"].results[1].partial is True
+
+
 def test_status_label_explains_why_nothing_is_eligible():
     model = catalog.by_id("rtx-5080")
     yes = lambda title, m: type("M", (), {"ok": True})()

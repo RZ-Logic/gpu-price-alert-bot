@@ -6,17 +6,16 @@ after the fixes, the count printed below is what remains. Run from the repo root
     python eval/adversarial_titles.py
 
 This measures match() alone. In the bot, the price floor and each retailer's category filter
-stop many of these before they could alert.
+stop many of these before they could alert. tests/test_eval.py pins which ones are still
+accepted, so a matcher change that moves the count updates that test in the same diff.
 """
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 from gpu_alerts import catalog
 from gpu_alerts.matching import match, parse_title
 
-M = {m.id: m for m in catalog.load()}
 # (model_id, title) pairs that should all be REJECTED (expected False)
 cases = [
  # suffix shorthand
@@ -126,11 +125,26 @@ cases = [
  ("rtx-5090", "Gaming PC Case with RTX 5090 32GB Graphics Card Support"),
  ("rtx-5090", "ASUS ROG Astral RTX 5090 32GB GDDR7 Gaming Graphics Card Gift Card"),
 ]
-fp = 0
-for mid, title in cases:
-    r = match(title, M[mid])
-    p = parse_title(title)
-    mark = "FP " if r.ok else "ok "
-    fp += r.ok
-    print(f"{mark}[{mid}] {title!r} -> {r.reason} | kind={p.kind.value} models={p.models} vram={p.vram_gb}")
-print("false accepts:", fp, "of", len(cases))
+
+
+def false_accepts() -> list[tuple[str, str]]:
+    """The (model_id, title) cases that match() still accepts."""
+    models = {m.id: m for m in catalog.load()}
+    return [(mid, title) for mid, title in cases if match(title, models[mid]).ok]
+
+
+def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    M = {m.id: m for m in catalog.load()}
+    fp = 0
+    for mid, title in cases:
+        r = match(title, M[mid])
+        p = parse_title(title)
+        mark = "FP " if r.ok else "ok "
+        fp += r.ok
+        print(f"{mark}[{mid}] {title!r} -> {r.reason} | kind={p.kind.value} models={p.models} vram={p.vram_gb}")
+    print("false accepts:", fp, "of", len(cases))
+
+
+if __name__ == "__main__":
+    main()

@@ -59,11 +59,11 @@ def _products(state: dict) -> list[dict]:
     if "Products" not in state:
         raise ParseError("__initialState__ has no Products key")
     products = state["Products"]
-    if products is None:
+    if products is None or products == []:
         # A no-results page carries Products: null with TotalItemCount 0.
         if state.get("TotalItemCount") in (0, None):
             return []
-        raise ParseError("Products is null but TotalItemCount is not 0")
+        raise ParseError(f"Products is {products!r} but TotalItemCount is {state.get('TotalItemCount')}")
     if not isinstance(products, list):
         raise ParseError("Products is not a list")
     return [p for p in products if isinstance(p, dict)]
@@ -136,9 +136,12 @@ def parse(payload: str | dict, query: str) -> list[Listing]:
     state = _state(payload)
     out: list[Listing] = []
     seen: set[str] = set()
+    malformed = 0
     for product in _products(state):
         cell = product.get("ItemCell")
         if not isinstance(cell, dict):
+            if "ComboCell" not in product:
+                malformed += 1
             continue  # combo rows carry ComboCell instead
         category = (cell.get("Subcategory") or {}).get("SubcategoryDescription") or None
         if _is_gpu_category(category) is False:
@@ -146,7 +149,10 @@ def parse(payload: str | dict, query: str) -> list[Listing]:
         title = ((cell.get("Description") or {}).get("Title") or "").strip()
         item = str(cell.get("Item") or "").strip()
         price, regular = _prices(cell)
-        if not title or not item or price is None or item in seen:
+        if not title or not item or price is None:
+            malformed += 1
+            continue
+        if item in seen:
             continue
         seen.add(item)
         seller = ((cell.get("Seller") or {}).get("SellerName") or "").strip() or None
@@ -164,6 +170,8 @@ def parse(payload: str | dict, query: str) -> list[Listing]:
             regular_price=regular,
             category=category,
         ))
+    if malformed and not out:
+        raise ParseError(f"none of {malformed} rows had a title, item number and price")
     return out
 
 
@@ -215,11 +223,14 @@ def search(query: str) -> ScrapeResult:
                     n_page, total = page_info(res.text)
                 except ParseError as exc:
                     failure = (Status.PARSE_ERROR, str(exc)[:200])
+                except Exception as exc:  # an odd row on page 2 must not discard page 1
+                    failure = (Status.PARSE_ERROR, f"unexpected {type(exc).__name__}: {exc}"[:200])
             if failure:
                 if page == 1:
                     result.status, result.detail = failure
                     return result
                 notes.append(f"page {page}: {failure[1]}")
+                result.partial = True
                 result.blocked_partway = failure[0] is Status.BLOCKED
                 break
             result.n_raw += n_page

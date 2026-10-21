@@ -1,10 +1,14 @@
 """The Discord bot: slash commands, the background price check and alert delivery."""
 
 import asyncio
+import functools
 import logging
+import re
 import time
+import unicodedata
 from collections import defaultdict
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
@@ -14,7 +18,7 @@ from discord import app_commands
 from discord.ext import tasks
 
 from . import catalog, config, pricing
-from .alerts import CROSSED, AlertState, Decision, decide
+from .alerts import CROSSED, UNCHANGED, AlertState, Decision, decide
 from .catalog import GPUModel
 from .pricing import DEFAULT_POLICY, RECORD_POLICY, ModelScan, Policy
 from .retailers.base import Listing, ScrapeResult, Status
@@ -28,12 +32,24 @@ CHECK_COOLDOWN_S = 300
 PRICES_FRESH = timedelta(hours=2)
 PRICES_SCAN_COOLDOWN_S = 600
 OWNER_ALERT_AFTER = 3          # failed background runs in a row before the owner hears about it
+OWNER_RECOVERED_AFTER = 2      # good runs in a row before the owner hears it works again
+SCAN_THREADS = 2               # scans at once (each also runs one thread per retailer); more wait their turn
 PRUNE_EVERY_S = 24 * 3600
-INVITE_PERMISSIONS = 19456     # View Channel + Send Messages + Embed Links
+ACCESS_CACHE_S = 3600          # how long a server membership check is trusted
+INVITE_PERMISSIONS = 19456 | 1 << 38   # View Channel + Send Messages + Embed Links + Send Messages in Threads
+THREAD_TYPES = {discord.ChannelType.public_thread, discord.ChannelType.private_thread, discord.ChannelType.news_thread}
 GENERIC_ERROR = "Something went wrong on my side. It has been logged; please try again in a few minutes."
+NOT_ALLOWED = (
+    "This bot only answers in its owner's servers, and in DMs to their members. "
+    "/list and /remove still work anywhere for alerts you already have."
+)
+# Commands that read or delete only the caller's own alerts and start no scan, open to everyone.
+OWN_ALERT_COMMANDS = frozenset({"list", "remove"})
 COLOR_OK = 0x2ECC71
 COLOR_INFO = 0x3498DB
 COLOR_WARN = 0xE67E22
+# Discord markdown, plus "<" (timestamps, mentions) and "@" (@everyone); a backslash shows each as typed.
+_LABEL_ESCAPE = re.compile(r"([\\*_~|`<@])")
 
 
 # Formatting helpers (pure, so they can be tested without Discord)
@@ -54,8 +70,21 @@ def short(text: str, limit: int = 80) -> str:
 
 
 def link(label: str, url: str) -> str:
+    """A masked link. Labels are often listing titles, which sellers write, so their
+    markdown, mentions and timestamps show as typed instead of styling the embed.
+    Line-start markdown (headers, quotes, lists) cannot start inside the brackets."""
+    label = "".join(ch for ch in label if unicodedata.category(ch) not in ("Cc", "Cf"))   # bidi, zero-width
+    label = _LABEL_ESCAPE.sub(r"\\\1", label.replace("[", "(").replace("]", ")"))
     safe = url.replace(")", "%29").replace(" ", "%20")
-    return f"[{label.replace('[', '(').replace(']', ')')}]({safe})"
+    return f"[{label}]({safe})"
+
+
+def can_post(interaction: discord.Interaction) -> bool:
+    """Whether the bot may post a ping (a message with an embed) where the command ran."""
+    perms = interaction.app_permissions
+    in_thread = getattr(interaction.channel, "type", None) in THREAD_TYPES
+    send = perms.send_messages_in_threads if in_thread else perms.send_messages
+    return perms.view_channel and send and perms.embed_links
 
 
 def policy_for(alert: Alert) -> Policy:
@@ -75,6 +104,11 @@ def stats_line(stats: PriceStats | None) -> str:
         f"low {money(stats.low_cents)}, median {money(stats.median_cents)}, "
         f"high {money(stats.high_cents)} over {stats.count} check{'' if stats.count == 1 else 's'}"
     )
+
+
+def n_active(scan: ModelScan) -> int:
+    """Retailers the scan asked, leaving out those turned off in config."""
+    return sum(1 for r in scan.results if Status(r.status) is not Status.DISABLED)
 
 
 def retailer_lines(scan: ModelScan, found: list[Listing]) -> list[str]:
@@ -101,7 +135,7 @@ def lookup_embed(scan: ModelScan, found: list[Listing], stats: PriceStats | None
         embed.description = "No eligible offer right now (new, in stock or unknown stock, sold by the retailer)."
     embed.add_field(name="By retailer", value="\n".join(retailer_lines(scan, found))[:1024] or "none", inline=False)
     embed.add_field(name="Last 30 days", value=stats_line(stats), inline=False)
-    embed.set_footer(text=f"{scan.n_ok} of {len(scan.results)} retailers answered")
+    embed.set_footer(text=f"{scan.n_ok} of {n_active(scan)} retailers answered")
     return embed
 
 
@@ -137,6 +171,17 @@ class Evaluation:
     delivered: bool
 
 
+def configured_guilds() -> set[int]:
+    return {g for g in (config.DISCORD_GUILD_ID, *config.ALLOWED_GUILD_IDS) if g}
+
+
+class AccessTree(app_commands.CommandTree):
+    """Runs GPUAlertBot.check_access before every command and autocomplete."""
+
+    async def interaction_check(self, interaction: discord.Interaction, /) -> bool:
+        return await self.client.check_access(interaction)
+
+
 class GPUAlertBot(discord.Client):
     def __init__(
         self,
@@ -147,18 +192,35 @@ class GPUAlertBot(discord.Client):
         matcher: pricing.Matcher | None = None,
     ) -> None:
         super().__init__(intents=discord.Intents.default())
-        self.tree = app_commands.CommandTree(self)
+        # Installed to servers only; the commands work there and in DMs with the bot.
+        self.tree = AccessTree(
+            self,
+            allowed_contexts=app_commands.AppCommandContext(guild=True, dm_channel=True, private_channel=False),
+            allowed_installs=app_commands.AppInstallationType(guild=True, user=False),
+        )
         self.tree.error(self.on_tree_error)
         self.db_path = Path(db_path) if db_path else config.DB_PATH
         self.store = store
         self.scan_models = scan_models
         self.matcher = matcher
+        # A scan holds its thread for seconds to minutes. On asyncio's default pool
+        # (as few as 5 threads) a handful of scans left every command's first database
+        # read, and aiohttp's DNS lookups, queued past Discord's 3 s reply deadline.
+        # Scans get a small pool of their own; SQLite gets one thread (Store
+        # serializes on a lock anyway), so database work never waits behind a scan.
+        self._scan_pool = ThreadPoolExecutor(max_workers=SCAN_THREADS, thread_name_prefix="scan-run")
+        self._db_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="db")
         self._eval_lock = asyncio.Lock()
+        self._unsaved: dict[int, dict] = {}   # alert id -> state of a sent ping not yet saved
         self._prices_lock = asyncio.Lock()
         self._prices_scan_at = 0.0
         self._last_prune = 0.0
+        self._runs = 0   # background runs so far, to rotate the scan order
         self._fail_streak: dict[str, int] = defaultdict(int)
+        self._ok_streak: dict[str, int] = defaultdict(int)
         self._owner_warned: set[str] = set()
+        self._unreachable: set[int] = set()   # alerts the owner was told cannot be delivered
+        self._members: dict[tuple[int, int], tuple[bool, float]] = {}   # (guild, user) -> (member, checked at)
         self.check_loop = tasks.loop(minutes=max(1, config.CHECK_INTERVAL_MINUTES))(self._check_tick)
         self.check_loop.before_loop(self._before_check)
         self._register_commands()
@@ -166,29 +228,8 @@ class GPUAlertBot(discord.Client):
     # Lifecycle
 
     async def setup_hook(self) -> None:
-        if self.store is None:
-            self.store = await asyncio.to_thread(Store, self.db_path)
-        if config.DISCORD_GUILD_ID:
-            guild = discord.Object(id=config.DISCORD_GUILD_ID)
-            self.tree.copy_global_to(guild=guild)
-            synced = await self.tree.sync(guild=guild)
-            log.info("synced %d commands to guild %s", len(synced), config.DISCORD_GUILD_ID)
-            # Commands registered globally earlier (by v1, or by a run without
-            # DISCORD_GUILD_ID) would show up a second time next to the guild copies.
-            # Syncing an empty global tree removes them; the guild copies made above
-            # keep serving every command. In guild mode the commands therefore work
-            # only in that server, not in DMs. Unset DISCORD_GUILD_ID to go back to
-            # global commands (the guild copies then stay until removed in Discord).
-            self.tree.clear_commands(guild=None)
-            try:
-                await self.tree.sync()
-                log.info("cleared stale global commands")
-            except discord.HTTPException:
-                log.warning("could not clear stale global commands", exc_info=True)
-        else:
-            synced = await self.tree.sync()
-            log.info("synced %d global commands (can take up to an hour to appear)", len(synced))
-        self.check_loop.start()
+        # First, so the link is there even when the command sync below fails: the
+        # README has users start the bot before they have added it to their server.
         if self.application_id:
             url = discord.utils.oauth_url(
                 self.application_id,
@@ -196,6 +237,53 @@ class GPUAlertBot(discord.Client):
                 scopes=("bot", "applications.commands"),
             )
             log.info("invite URL: %s", url)
+        if not configured_guilds():
+            log.info("DISCORD_GUILD_ID and ALLOWED_GUILD_IDS are unset: commands answer in the owner's servers")
+        if self.store is None:
+            self.store = await self._db(Store, self.db_path)
+        # A failed sync leaves the commands Discord already has; the background check
+        # still starts, so existing alerts keep going out.
+        if config.DISCORD_GUILD_ID:
+            guild = discord.Object(id=config.DISCORD_GUILD_ID)
+            self.tree.copy_global_to(guild=guild)
+            try:
+                synced = await self.tree.sync(guild=guild)
+            except discord.Forbidden:
+                log.error(
+                    "the bot is not in guild %s yet: open the invite URL, then restart", config.DISCORD_GUILD_ID
+                )
+                synced = None
+            except discord.HTTPException:
+                log.error("could not sync commands to guild %s", config.DISCORD_GUILD_ID, exc_info=True)
+                synced = None
+            # Commands registered globally earlier (by v1, or by a run without
+            # DISCORD_GUILD_ID) would show up a second time next to the guild copies.
+            # Syncing an empty global tree removes them; the guild copies made above
+            # keep serving every command. In guild mode the commands therefore work
+            # only in that server, not in DMs. Unset DISCORD_GUILD_ID to go back to
+            # global commands (the guild copies then stay until removed in Discord).
+            # After a failed guild sync the global ones are all there is, so they stay.
+            if synced is not None:
+                log.info("synced %d commands to guild %s", len(synced), config.DISCORD_GUILD_ID)
+                self.tree.clear_commands(guild=None)
+                try:
+                    await self.tree.sync()
+                    log.info("cleared stale global commands")
+                except discord.HTTPException:
+                    log.warning("could not clear stale global commands", exc_info=True)
+        else:
+            try:
+                synced = await self.tree.sync()
+                log.info("synced %d global commands (can take up to an hour to appear)", len(synced))
+            except discord.HTTPException:
+                log.error("could not sync commands; Discord keeps the ones from the last sync", exc_info=True)
+        from . import retailers
+
+        log.info(
+            "checking prices every %d minutes at: %s",
+            self.check_loop.minutes, ", ".join(retailers.enabled_ids()) or "no retailer (all disabled)",
+        )
+        self.check_loop.start()
 
     async def on_ready(self) -> None:
         log.info("logged in as %s (%s)", self.user, getattr(self.user, "id", "?"))
@@ -203,6 +291,8 @@ class GPUAlertBot(discord.Client):
     async def close(self) -> None:
         self.check_loop.cancel()
         await super().close()
+        self._scan_pool.shutdown(wait=False, cancel_futures=True)
+        self._db_pool.shutdown(wait=True)   # lets a write in progress finish
         if self.store is not None:
             self.store.close()
 
@@ -223,10 +313,10 @@ class GPUAlertBot(discord.Client):
         return self.store
 
     async def _db(self, fn: Callable, *args, **kwargs):
-        return await asyncio.to_thread(fn, *args, **kwargs)
+        return await asyncio.get_running_loop().run_in_executor(self._db_pool, functools.partial(fn, *args, **kwargs))
 
     async def _scan(self, models: list[GPUModel]) -> dict[str, ModelScan]:
-        return await asyncio.to_thread(self.scan_models, models)
+        return await asyncio.get_running_loop().run_in_executor(self._scan_pool, self.scan_models, models)
 
     def _offers(self, scan: ModelScan, policy: Policy) -> list[Listing]:
         return pricing.offers(scan.model, scan.results, policy, self.matcher)
@@ -244,10 +334,9 @@ class GPUAlertBot(discord.Client):
                     log.exception("could not record scrape runs for %s", scan.model.id)
             try:
                 found = await asyncio.to_thread(self._offers, scan, RECORD_POLICY)
-                n_active = sum(1 for r in scan.results if Status(r.status) is not Status.DISABLED)
                 await self._db(
                     store.record_scan, scan.model.id, found,
-                    n_ok=scan.n_ok, n_retailers=n_active, at=scan.scanned_at,
+                    n_ok=scan.n_ok, n_retailers=n_active(scan), at=scan.scanned_at,
                 )
             except Exception:
                 log.exception("could not record scan for %s", scan.model.id)
@@ -277,34 +366,112 @@ class GPUAlertBot(discord.Client):
             msg = GENERIC_ERROR
         await self._reply(interaction, msg, ephemeral=True)
 
+    # Access. Every scan goes out from the owner's connection, so the commands answer
+    # only in DISCORD_GUILD_ID and ALLOWED_GUILD_IDS or, with neither set, in servers
+    # the application owner is in; DMs only for members of one of those servers.
+    # /list and /remove answer everyone: alerts made before a server lost access (or
+    # before this gate existed) are still checked and still ping until removed.
+
+    async def check_access(self, interaction: discord.Interaction) -> bool:
+        if getattr(interaction.command, "name", None) in OWN_ALERT_COMMANDS:
+            return True
+        try:
+            allowed = await self._allowed(interaction.guild_id, interaction.user.id)
+        except discord.HTTPException:
+            log.warning("could not check access for user %s", interaction.user.id, exc_info=True)
+            allowed = False
+        if allowed:
+            return True
+        log.info("refused user %s in guild %s", interaction.user.id, interaction.guild_id)
+        try:
+            # Returning False alone sends nothing, and Discord shows "did not respond".
+            if interaction.type is discord.InteractionType.autocomplete:
+                await interaction.response.autocomplete([])
+            else:
+                await interaction.response.send_message(NOT_ALLOWED, ephemeral=True)
+        except discord.HTTPException:
+            log.warning("could not send the refusal", exc_info=True)
+        return False
+
+    async def _allowed(self, guild_id: int | None, user_id: int) -> bool:
+        configured = configured_guilds()
+        if guild_id is not None:
+            return await self._guild_allowed(guild_id, configured, user_id)
+        for gid in configured or [g.id for g in self.guilds]:
+            if await self._guild_allowed(gid, configured, user_id) and await self._member(gid, user_id):
+                return True
+        return False
+
+    async def _guild_allowed(self, guild_id: int, configured: set[int], user_id: int) -> bool:
+        if configured:
+            return guild_id in configured
+        owner = await self._owner()
+        return owner is not None and (owner.id == user_id or await self._member(guild_id, owner.id))
+
+    async def _member(self, guild_id: int, user_id: int) -> bool:
+        """_is_member, remembered for ACCESS_CACHE_S."""
+        hit = self._members.get((guild_id, user_id))
+        if hit is None or time.monotonic() - hit[1] >= ACCESS_CACHE_S:
+            hit = (await self._is_member(guild_id, user_id), time.monotonic())
+            self._members[(guild_id, user_id)] = hit
+        return hit[0]
+
+    async def _is_member(self, guild_id: int, user_id: int) -> bool:
+        guild = self.get_guild(guild_id)
+        if guild is None:
+            return False   # the bot itself is not in that server
+        if guild.get_member(user_id) is not None:
+            return True
+        try:
+            await guild.fetch_member(user_id)   # one API call; needs no members intent
+        except discord.NotFound:
+            return False
+        return True
+
+    async def _owner(self) -> discord.abc.User | discord.TeamMember | None:
+        app = self.application or await self.application_info()
+        return app.team.owner if app.team and app.team.owner else app.owner
+
     # Alert evaluation and delivery
 
     async def evaluate(self, alert_id: int, scan: ModelScan, *, deliver: bool = True) -> Evaluation | None:
         """Run the state machine for one alert against one scan and persist the outcome.
 
         With deliver=False the caller shows the result itself (as /check does), so a
-        notification counts as delivered.
+        notification counts as delivered. Returns None when the alert is gone, its id
+        now belongs to another alert, or the state of its last ping cannot be saved yet.
         """
         store = self._store()
         async with self._eval_lock:
-            alert = await self._db(store.get_alert, alert_id)
-            if alert is None:
+            if not await self._save_unsaved(alert_id):
                 return None
-            model = catalog.by_id(alert.model_id) or scan.model
+            alert = await self._db(store.get_alert, alert_id)
+            # SQLite gives a removed alert's id to the next new alert, which can be
+            # another GPU (and another user) than the one this scan is for.
+            if alert is None or alert.model_id != scan.model.id:
+                return None
+            model = scan.model
             found = await asyncio.to_thread(self._offers, scan, policy_for(alert))
             best = found[0] if found else None
             price = to_cents(best.price) if best and scan.n_ok else None
-            # Retailers that answered (ok or empty). None of them: no change. Some of
-            # them with nothing eligible (sold out): counts toward re-arming.
-            answered = {r.retailer for r in scan.results if r.ok}
+            # Retailers that answered completely (ok or empty, nothing left unread). None
+            # of them: no evidence for re-arming. Some of them with nothing eligible (sold
+            # out): counts toward re-arming. A partial read still adds its offers above.
+            answered = {r.retailer for r in scan.results if r.ok and not r.partial}
+            under = {li.retailer for li in found if to_cents(li.price) <= alert.target_cents}
             active = {r.retailer for r in scan.results if Status(r.status) is not Status.DISABLED}
             # A retailer turned off in config never answers again; it must not hold
-            # the alert disarmed forever, so forget it as the notified retailer.
-            held_by = alert.notified_retailer if alert.notified_retailer in active else None
+            # the alert disarmed forever.
             state = AlertState(
-                alert.target_cents, alert.armed, alert.notified_price_cents, alert.above_streak, held_by
+                alert.target_cents, alert.armed, alert.notified_price_cents, alert.above_streak,
+                alert.notified_retailer, alert.holding_retailers & active, alert.held_streak,
             )
-            decision = decide(state, price, best.retailer if price is not None else None, answered)
+            # Change nothing when no retailer answered (nothing was seen, so the last
+            # price and its check time stay) or a newer scan already decided this alert
+            # (a /check during a background run that read the prices earlier).
+            if not scan.n_ok or (alert.observed_at is not None and scan.scanned_at <= alert.observed_at):
+                return Evaluation(alert, model, best, Decision(False, UNCHANGED, state), True)
+            decision = decide(state, price, best.retailer if price is not None else None, answered, under)
             delivered = not decision.notify or not deliver
             if decision.notify and deliver and best is not None:
                 stats = await self._db(
@@ -313,23 +480,63 @@ class GPUAlertBot(discord.Client):
                 )
                 delivered = await self.deliver(alert, alert_embed(alert, model, best, found, stats, decision.kind))
             now = utcnow()
-            last_price = price if price is not None else alert.last_price_cents
+            last_price = price   # None when retailers answered but nothing was eligible
             if delivered:
                 new = decision.new_state
-                await self._db(
-                    store.update_alert_state, alert.id,
+                fields = dict(
                     armed=new.armed, notified_price_cents=new.notified_price_cents,
                     notified_at=now if decision.notify else alert.notified_at,
                     last_price_cents=last_price, last_checked_at=now,
                     expected_target_cents=alert.target_cents,
                     above_streak=new.above_streak,
                     notified_retailer=new.notified_retailer,
+                    holding_retailers=new.holding_retailers, held_streak=new.held_streak,
+                    observed_at=scan.scanned_at,
                     expected_rev=alert.rev,
+                    expected_user_id=alert.user_id, expected_model_id=alert.model_id,
                 )
+                try:
+                    await self._db(store.update_alert_state, alert.id, **fields)
+                except Exception:
+                    if decision.notify and deliver:
+                        # The ping goes out before the state is saved, so a failed send
+                        # is retried next run rather than lost. When the save fails
+                        # instead (database locked, disk full), keep the state here and
+                        # save it before this alert is judged again, so the deal is not
+                        # pinged every run. A restart in between repeats the ping once.
+                        self._unsaved[alert.id] = fields
+                    raise
             else:
                 # Keep the alert armed so the next run tries again.
-                await self._db(store.touch_alert, alert.id, last_price, now)
+                await self._db(
+                    store.touch_alert, alert.id, last_price, now,
+                    expected_user_id=alert.user_id, expected_model_id=alert.model_id,
+                )
             return Evaluation(alert, model, best, decision, delivered)
+
+    async def _save_unsaved(self, alert_id: int) -> bool:
+        """Save the state of a ping that went out but could not be saved. Returns False
+        while it still cannot be saved. The write keeps its guards, so a user edit made
+        since (which re-arms the alert) wins and the kept state is dropped."""
+        fields = self._unsaved.pop(alert_id, None)
+        if fields is None:
+            return True
+        try:
+            await self._db(self._store().update_alert_state, alert_id, **fields)
+        except Exception:
+            self._unsaved[alert_id] = fields
+            log.warning("alert %s: the state of a sent ping still cannot be saved", alert_id, exc_info=True)
+            return False
+        return True
+
+    async def _undo_notification(self, ev: Evaluation) -> None:
+        try:
+            async with self._eval_lock:
+                await self._db(
+                    self._store().undo_notification, ev.alert, ev.decision.new_state.notified_price_cents
+                )
+        except Exception:
+            log.exception("alert %s: could not undo an undelivered /check notification", ev.alert.id)
 
     async def deliver(self, alert: Alert, embed: discord.Embed) -> bool:
         """Send to the alert's channel, falling back to a DM. Returns True when sent."""
@@ -347,16 +554,27 @@ class GPUAlertBot(discord.Client):
             if channel is not None and hasattr(channel, "send"):
                 try:
                     await channel.send(content, embed=embed, allowed_mentions=mentions)
+                    self._unreachable.discard(alert.id)
                     return True
                 except discord.HTTPException as exc:
                     log.info("alert %s: send to channel failed (%s), trying DM", alert.id, exc.status)
         try:
             user = self.get_user(alert.user_id) or await self.fetch_user(alert.user_id)
             await user.send(embed=embed, allowed_mentions=mentions)
+            self._unreachable.discard(alert.id)
             return True
         except discord.HTTPException:
             log.warning("alert %s: could not reach user %s by channel or DM", alert.id, alert.user_id)
-            return False
+        # The alert stays armed and is tried again every check, which reaches the user
+        # once they open their DMs. Nothing else tells anyone, so tell the owner once.
+        if alert.id not in self._unreachable:
+            model = catalog.by_id(alert.model_id)
+            if await self.dm_owner(
+                f"An alert for {model.name if model else alert.model_id} cannot reach user {alert.user_id}: "
+                "posting in its channel and a DM both failed. It is tried again every check."
+            ):
+                self._unreachable.add(alert.id)
+        return False
 
     # Background check
 
@@ -380,6 +598,13 @@ class GPUAlertBot(discord.Client):
                 log.warning("alert model %r is not in the catalog; skipping", model_id)
             else:
                 models.append(model)
+        # A retailer that blocks partway through is skipped for the models after it
+        # (scan_models). Starting one model later each run spreads that loss over every
+        # alert instead of always costing the newest ones the same retailer.
+        if models:
+            k = self._runs % len(models)
+            models = models[k:] + models[:k]
+        self._runs += 1
         start = time.monotonic()
         scans = await self._scan(models)
         await self.record(scans)
@@ -404,7 +629,10 @@ class GPUAlertBot(discord.Client):
         )
 
     async def watch_health(self, scans: dict[str, ModelScan]) -> None:
-        """Count background runs where a retailer failed every search; tell the owner at 3."""
+        """Count background runs where a retailer failed every search; tell the owner at 3,
+        and that it works again after 2 good runs, so a retailer that answers now and
+        then does not send a pair of DMs every few hours. A DM that could not be sent
+        is tried again on the next run."""
         per: dict[str, list[ScrapeResult]] = defaultdict(list)
         seen: set[int] = set()
         for scan in scans.values():
@@ -417,11 +645,13 @@ class GPUAlertBot(discord.Client):
         for rid, results in per.items():
             if any(r.ok for r in results):
                 self._fail_streak[rid] = 0
-                if rid in self._owner_warned:
-                    self._owner_warned.discard(rid)
+                self._ok_streak[rid] += 1
+                if rid in self._owner_warned and self._ok_streak[rid] >= OWNER_RECOVERED_AFTER:
                     log.info("%s recovered", rid)
-                    await self.dm_owner(f"{retailer_name(rid)} is working again.")
+                    if await self.dm_owner(f"{retailer_name(rid)} is working again."):
+                        self._owner_warned.discard(rid)
                 continue
+            self._ok_streak[rid] = 0
             self._fail_streak[rid] += 1
             if self._fail_streak[rid] >= OWNER_ALERT_AFTER and rid not in self._owner_warned:
                 # The placeholders scan_models adds after a block carry no HTTP status.
@@ -429,22 +659,24 @@ class GPUAlertBot(discord.Client):
                 last = (real or results)[-1]
                 detail = f"{Status(last.status).value}" + (f" (HTTP {last.http_status})" if last.http_status else "")
                 log.warning("%s failed %d runs in a row: %s %s", rid, self._fail_streak[rid], detail, last.detail)
-                self._owner_warned.add(rid)
-                await self.dm_owner(
+                if await self.dm_owner(
                     f"{retailer_name(rid)} has failed {self._fail_streak[rid]} checks in a row: {detail}. "
                     "Run `python -m gpu_alerts health` on the bot PC for details."
-                )
+                ):
+                    self._owner_warned.add(rid)
 
-    async def dm_owner(self, text: str) -> None:
+    async def dm_owner(self, text: str) -> bool:
+        """DM the application owner. Returns True when sent."""
         try:
-            app = self.application or await self.application_info()
-            owner = app.team.owner if app.team and app.team.owner else app.owner
+            owner = await self._owner()
             if owner is not None:
                 # A team owner is a TeamMember, which cannot be messaged; resolve a real User.
                 user = self.get_user(owner.id) or await self.fetch_user(owner.id)
                 await user.send(text)
+                return True
         except Exception:
             log.warning("could not DM the application owner", exc_info=True)
+        return False
 
     # Slash commands
 
@@ -461,12 +693,15 @@ class GPUAlertBot(discord.Client):
             interaction: discord.Interaction, current: str
         ) -> list[app_commands.Choice[str]]:
             alerts = await self._db(self._store().list_alerts, interaction.user.id)
+            # The same matching as the GPU list, so "RTX 5060 8GB" offers the plain RTX 5060.
+            hits = {m.id for m in catalog.search(current, limit=len(catalog.load()))}
             words = current.lower().replace("-", " ").split()
             out = []
             for a in alerts:
                 model = catalog.by_id(a.model_id)
-                name = model.name if model else a.model_id
-                if all(w in f"{name.lower()} {a.model_id.replace('-', ' ')}" for w in words):
+                # A model since dropped from the catalog can still be found by its id, to remove it.
+                if a.model_id in hits or (model is None and all(w in a.model_id.replace("-", " ") for w in words)):
+                    name = model.name if model else a.model_id
                     out.append(app_commands.Choice(name=f"{name} (target {money(a.target_cents)})", value=a.model_id))
             return out[:25]
 
@@ -492,10 +727,13 @@ class GPUAlertBot(discord.Client):
                 await self._reply(interaction, unknown_gpu, ephemeral=True)
                 return
             store = self._store()
+            # A ping in a channel the bot cannot post in would fail every check (slash
+            # commands still work there), so such an alert goes straight to DMs.
+            by_dm = interaction.guild_id is not None and not can_post(interaction)
             try:
                 alert, created = await self._db(
                     store.upsert_alert, interaction.user.id, model.id, target * 100,
-                    channel_id=interaction.channel_id, guild_id=interaction.guild_id,
+                    channel_id=None if by_dm else interaction.channel_id, guild_id=interaction.guild_id,
                     include_open_box=open_box, include_marketplace=marketplace,
                     max_per_user=MAX_ALERTS_PER_USER,
                 )
@@ -508,14 +746,28 @@ class GPUAlertBot(discord.Client):
                 )
                 return
             policy = policy_for(alert)
+            # Only a recent scan says what the next check will see; an older one may be
+            # from a /lookup months ago.
             at, latest = await self._db(
-                store.latest_offers, model.id, include_open_box=open_box, include_marketplace=marketplace
+                store.latest_offers, model.id, max_age=PRICES_FRESH,
+                include_open_box=open_box, include_marketplace=marketplace,
             )
             stats = await self._db(
                 store.price_stats, model.id, 30, include_open_box=open_box, include_marketplace=marketplace
             )
             verb = "Alert set" if created else "Alert updated"
             lines = [f"{verb}: **{model.name}** at or below **{money(alert.target_cents)}** ({policy_note(policy)})."]
+            if by_dm:
+                lines.append(
+                    "I cannot post in this channel, so pings come by DM. Allow direct messages from "
+                    "server members for this server, or set the alert again in a channel where I can post."
+                )
+            floor = to_cents(model.min_price)
+            if alert.target_cents < floor:
+                lines.append(
+                    f"Listings under {money(floor)} are not counted for the {model.name} (that floor keeps out "
+                    "cables and parts), so this target cannot be reached."
+                )
             if latest:
                 o = latest[0]
                 lines.append(
@@ -524,6 +776,8 @@ class GPUAlertBot(discord.Client):
                 )
                 if o.price_cents <= alert.target_cents:
                     lines.append("That is already at or under your target, so expect a ping on the next check.")
+            elif at is not None:
+                lines.append(f"Checked {discord.utils.format_dt(at, 'R')}: nothing eligible under these settings.")
             else:
                 lines.append("No recent price yet; the next check will fetch one.")
             if stats.count:
@@ -555,12 +809,17 @@ class GPUAlertBot(discord.Client):
                     "watching" if a.armed
                     else f"notified at {money(a.notified_price_cents)}, waiting for a further drop or a rise above target"
                 )
-                checked = discord.utils.format_dt(a.last_checked_at, "R") if a.last_checked_at else "not checked yet"
+                if a.last_checked_at is None:
+                    seen = "not checked yet"
+                elif a.last_price_cents is None:
+                    seen = f"nothing eligible ({discord.utils.format_dt(a.last_checked_at, 'R')})"
+                else:
+                    seen = f"last price {money(a.last_price_cents)} ({discord.utils.format_dt(a.last_checked_at, 'R')})"
                 extras = [x for x, on in (("open box", a.include_open_box), ("marketplace", a.include_marketplace)) if on]
                 embed.add_field(
                     name=model.name if model else a.model_id,
                     value=(
-                        f"Target {money(a.target_cents)}, last price {money(a.last_price_cents)} ({checked})\n"
+                        f"Target {money(a.target_cents)}, {seen}\n"
                         f"{state}" + (f"\nIncludes: {', '.join(extras)}" if extras else "")
                     ),
                     inline=False,
@@ -570,34 +829,45 @@ class GPUAlertBot(discord.Client):
         @tree.command(name="check", description="Check prices for your alerts now")
         @app_commands.checks.cooldown(1, CHECK_COOLDOWN_S)
         async def check_cmd(interaction: discord.Interaction) -> None:
+            await interaction.response.defer(ephemeral=True, thinking=True)
             store = self._store()
             alerts = await self._db(store.list_alerts, interaction.user.id)
             if not alerts:
                 await self._reply(interaction, "You have no alerts. Add one with /alert.", ephemeral=True)
                 return
-            await interaction.response.defer(ephemeral=True, thinking=True)
             models = [m for m in (catalog.by_id(a.model_id) for a in alerts) if m]
             scans = await self._scan(models)
             await self.record(scans)
             embed = discord.Embed(title="Your alerts, checked now", color=COLOR_INFO, timestamp=discord.utils.utcnow())
-            for a in alerts:
-                scan = scans.get(a.model_id)
-                if scan is None:
-                    continue
-                ev = await self.evaluate(a.id, scan, deliver=False)
-                if ev is None:
-                    continue
-                if ev.best is None:
-                    value = f"No eligible offer ({scan.n_ok} of {len(scan.results)} retailers answered)."
-                else:
-                    value = (
-                        f"{link(f'${ev.best.price:,.2f}', ev.best.url)} at {retailer_name(ev.best.retailer)}, "
-                        f"target {money(ev.alert.target_cents)}"
-                    )
-                    if to_cents(ev.best.price) <= ev.alert.target_cents:
-                        value += "\n**At or under your target.**"
-                embed.add_field(name=ev.model.name, value=value[:1024], inline=False)
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            notified: list[Evaluation] = []
+            try:
+                for a in alerts:
+                    scan = scans.get(a.model_id)
+                    if scan is None:
+                        continue
+                    ev = await self.evaluate(a.id, scan, deliver=False)
+                    if ev is None:
+                        continue
+                    if ev.decision.notify:
+                        notified.append(ev)
+                    if ev.best is None:
+                        value = f"No eligible offer ({scan.n_ok} of {n_active(scan)} retailers answered)."
+                    else:
+                        value = (
+                            f"{link(f'${ev.best.price:,.2f}', ev.best.url)} at {retailer_name(ev.best.retailer)}, "
+                            f"target {money(ev.alert.target_cents)}"
+                        )
+                        if to_cents(ev.best.price) <= ev.alert.target_cents:
+                            value += "\n**At or under your target.**"
+                    embed.add_field(name=ev.model.name, value=value[:1024], inline=False)
+                await interaction.followup.send(embed=embed, ephemeral=True)
+            except Exception:
+                # evaluate saved these notifications as delivered by this reply, which
+                # never arrived (e.g. the interaction token expired on a slow scan). Put
+                # them back so the next background run pings instead.
+                for ev in notified:
+                    await self._undo_notification(ev)
+                raise
 
         @tree.command(name="lookup", description="Live prices for one GPU across every retailer")
         @app_commands.describe(gpu="GPU model (pick from the list)")
@@ -708,5 +978,6 @@ class GPUAlertBot(discord.Client):
 
 def run() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    config.warn_unknown_retailers()
     token = config.discord_token()
     GPUAlertBot().run(token, log_handler=None)

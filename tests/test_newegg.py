@@ -134,6 +134,54 @@ def test_no_results_page_is_empty_not_error():
     assert newegg.page_info(NO_RESULTS) == (0, 0)
 
 
+def _drift(edit) -> dict:
+    state = newegg._state(P1)
+    for product in state["Products"]:
+        edit(product)
+    return state
+
+
+def _rename(d: dict, old: str, new: str) -> None:
+    d[new] = d.pop(old)
+
+
+@pytest.mark.parametrize("edit", [
+    lambda p: (_rename(p["ItemCell"], "FinalPrice", "Final"), _rename(p["ItemCell"], "UnitCost", "Cost")),
+    lambda p: _rename(p["ItemCell"]["Description"], "Title", "Name"),
+    lambda p: _rename(p, "ItemCell", "ProductCell"),
+], ids=["price-renamed", "title-renamed", "itemcell-renamed"])
+def test_parse_raises_when_no_row_is_usable(edit):
+    # Field drift must not read as a healthy EMPTY page.
+    with pytest.raises(ParseError, match="none of 36 rows had a title, item number and price"):
+        newegg.parse(_drift(edit), "rtx 5080")
+
+
+def test_parse_category_rejects_are_not_drift():
+    def not_a_card(product):
+        product["ItemCell"]["Subcategory"]["SubcategoryDescription"] = "Gaming Desktops"
+
+    assert newegg.parse(_drift(not_a_card), "rtx 5080") == []
+
+
+def test_empty_products_with_results_reported_raises():
+    # Products: null with results reported is already an error; an empty list must be too.
+    state = newegg._state(P1)
+    state["Products"] = []
+    with pytest.raises(ParseError, match="TotalItemCount is 196"):
+        newegg.parse(state, "rtx 5080")
+    state["TotalItemCount"] = 0
+    assert newegg.parse(state, "x") == []
+
+
+def test_search_field_drift_is_a_parse_error(monkeypatch):
+    drifted = json.dumps(_drift(lambda p: _rename(p["ItemCell"]["Description"], "Title", "Name")))
+    fake, _ = _fake_fetch([(200, drifted, {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = newegg.search("rtx 5080")
+    assert res.status is Status.PARSE_ERROR and not res.ok
+    assert "none of 36 rows had a title, item number and price" in res.detail
+
+
 def test_card_markup_without_state_raises():
     with pytest.raises(ParseError):
         newegg.parse(LAYOUT_A_CARDS, "rtx 5070")
@@ -151,6 +199,7 @@ def test_search_reads_two_pages(monkeypatch):
     assert len(res.listings) == 54
     assert calls == [{"d": "rtx 5080", "N": "4131"}, {"d": "rtx 5080", "N": "4131", "page": "2"}]
     assert "196 results reported" in res.detail
+    assert res.partial is False
 
 
 def test_search_stops_after_short_page(monkeypatch):
@@ -169,7 +218,41 @@ def test_search_page2_failure_keeps_page1(monkeypatch):
     assert res.status is Status.OK
     assert len(res.listings) == 36
     assert "page 2: HTTP 403" in res.detail
-    assert res.blocked_partway is True
+    assert res.blocked_partway is True and res.partial is True
+
+
+@pytest.mark.parametrize("status, text, extra, reason, blocked", [
+    (None, "", {"error": "Timeout: 30 s"}, "page 2: Timeout: 30 s", False),
+    (500, "oops", {}, "page 2: HTTP 500", False),
+    (200, LAYOUT_A_CARDS, {}, "page 2: no window.__initialState__ in page", False),
+    (200, "<html><head><title>CAPTCHA page</title></head></html>", {}, "page 2: bot-check page", True),
+], ids=["timeout", "http500", "no-state", "captcha-title"])
+def test_search_page2_failure_marks_result_partial(monkeypatch, status, text, extra, reason, blocked):
+    # Any page-2 failure leaves a partial read, but only a block trips the run breaker.
+    fake, _ = _fake_fetch([(200, P1, {}), (status, text, extra)])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = newegg.search("rtx 5080")
+    assert res.status is Status.OK and len(res.listings) == 36
+    assert res.partial is True
+    assert res.blocked_partway is blocked
+    assert reason in res.detail
+
+
+def test_search_unexpected_error_on_page2_keeps_page1(monkeypatch):
+    state = newegg._state(P2)
+    state["Products"][0]["ItemCell"]["Description"] = ["not", "an", "object"]
+    fake, _ = _fake_fetch([(200, P1, {}), (200, json.dumps(state), {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = newegg.search("rtx 5080")
+    assert res.status is Status.OK and len(res.listings) == 36
+    assert res.partial is True and res.blocked_partway is False
+    assert "page 2: unexpected AttributeError" in res.detail
+    # the same row on page 1 is still a parse error
+    fake, _ = _fake_fetch([(200, json.dumps(state), {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = newegg.search("rtx 5080")
+    assert res.status is Status.PARSE_ERROR and res.listings == []
+    assert "AttributeError" in res.detail
 
 
 def test_http_fetch_does_not_sleep_after_last_attempt(monkeypatch):

@@ -3,10 +3,10 @@
 The store's search matches loosely ("rtx 5070" also returns 5070 Ti cards,
 laptops and prebuilts; "xt" is not required). Results are sorted by price
 ascending, PAGE_SIZE per page (resultsPerPage), and up to MAX_PAGES pages are
-read while each page still holds graphics cards; past them sit the pricier
-laptops and prebuilts. id_category=914 (Graphics Cards, the parent of 916/917/918)
-makes the server drop non graphics card rows from each page, which cuts the
-response size; it does not narrow the ranking or the page count. Measured live
+read. id_category=914 (Graphics Cards, the parent of 916/917/918) makes the
+server drop non graphics card rows from each page, which cuts the response
+size; it does not narrow the ranking or the page count, so a page can come back
+with no rows while a later one still holds cards. Measured live
 2026-10-12: a category URL ignores the search term, the search page has no
 category facet, and resultsPerPage=100 works but returns about 21 MB.
 
@@ -86,17 +86,35 @@ def in_store_only(p: dict) -> bool:
     return not stock_text(p).startswith("Online - Available") and bool(sa.get("retail"))
 
 
+def _unreadable_price(p: dict) -> bool:
+    """price_amount is missing or not a number. Null and 0 are real unpriced rows (coming soon)."""
+    if "price_amount" not in p:
+        return True
+    value = p["price_amount"]
+    if value is None:
+        return False
+    try:
+        float(value)
+    except (TypeError, ValueError):
+        return True
+    return False
+
+
 def parse(payload: str | dict, query: str) -> list[Listing]:
     """Listings from one page of the Canada Computers search JSON."""
     data = _load(payload)
     out: list[Listing] = []
+    malformed = 0
     for p in data["products"]:
         if not isinstance(p, dict) or not _is_gpu(p):
             continue
         title = (p.get("name") or "").strip()
         price = _amount(p.get("price_amount"))
         url = p.get("url") or p.get("link") or p.get("canonical_url")
-        if not title or price is None or not url:
+        if not title or not url or _unreadable_price(p):
+            malformed += 1
+            continue
+        if price is None:
             continue
         stock = stock_text(p)
         regular = _amount(p.get("regular_price_amount"))
@@ -116,6 +134,8 @@ def parse(payload: str | dict, query: str) -> list[Listing]:
             regular_price=regular if regular and regular > price else None,
             category=category,
         ))
+    if malformed and not out:
+        raise ParseError(f"none of {malformed} graphics card rows had a name, price and url")
     return out
 
 
@@ -155,7 +175,7 @@ def search(query: str) -> ScrapeResult:
         pages_count = 1
         page = 1
         pages_read = 0
-        gpu_rows_ran_out = False
+        gpu_rows = 0
         while page <= min(pages_count, MAX_PAGES):
             res = http.fetch(SEARCH_URL, params={
                 "s": query, "t": "1", "page": str(page), "ajax": "true",
@@ -176,37 +196,34 @@ def search(query: str) -> ScrapeResult:
                     data = _load(res.text)
                     rows = parse(data, query)
                     n_page, total, pages_count = page_info(data)
+                    n_gpu = sum(1 for p in data["products"] if isinstance(p, dict) and _is_gpu(p))
                 except ParseError as exc:
                     failure = (Status.PARSE_ERROR, str(exc)[:200])
+                except Exception as exc:  # an odd row on a later page must not discard earlier pages
+                    failure = (Status.PARSE_ERROR, f"unexpected {type(exc).__name__}: {exc}"[:200])
             if failure:
                 if page == 1:
                     result.status, result.detail = failure
                     return result
                 notes.append(f"page {page}: {failure[1]}")
+                result.partial = True
                 result.blocked_partway = failure[0] is Status.BLOCKED
                 break
             if page == 1:
                 notes.append(f"{total} results over {pages_count} pages")
             pages_read += 1
             result.n_raw += n_page
+            gpu_rows += n_gpu
             for row in rows:
                 if row.url not in seen:
                     seen.add(row.url)
                     listings.append(row)
-            if not any(isinstance(p, dict) and _is_gpu(p) for p in data["products"]):
-                # Cheapest first, so later pages hold pricier laptops and prebuilts.
-                # With id_category the server already sends such a page empty.
-                gpu_rows_ran_out = True
-                break
             page += 1
         if pages_count > pages_read:
-            if gpu_rows_ran_out:
-                notes.append(f"stopped at page {pages_read} of {pages_count}: no graphics cards left")
-            else:
-                notes.append(f"read {pages_read} of {pages_count} pages, cheapest first")
-                model = _model_number(query)
-                if pages_read == MAX_PAGES and listings and model and not _has_model_rows(listings, model[1]):
-                    notes.append(f"page cap hit with no {model[0]} rows; results may be incomplete")
+            notes.append(f"read {pages_read} of {pages_count} pages, cheapest first")
+            model = _model_number(query)
+            if pages_read == MAX_PAGES and listings and model and not _has_model_rows(listings, model[1]):
+                notes.append(f"page cap hit with no {model[0]} rows; results may be incomplete")
         pickup = sum(1 for row in listings if row.category and "in-store pickup only" in row.category)
         if pickup:
             notes.append(f"{pickup} in-store pickup only")
@@ -217,7 +234,10 @@ def search(query: str) -> ScrapeResult:
             result.status = Status.BLOCKED
         else:
             result.status = Status.EMPTY
-            notes.append("no rows in the graphics card categories" if result.n_raw else "no results")
+            if gpu_rows:
+                notes.append(f"{gpu_rows} graphics card rows, none with a price")
+            else:
+                notes.append("no rows in the graphics card categories" if result.n_raw else "no results")
         result.detail = "; ".join(notes)
         return result
     except Exception as exc:  # search() must never raise

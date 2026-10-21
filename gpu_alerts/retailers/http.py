@@ -21,6 +21,16 @@ BLOCK_MARKERS = (
     "robot or human", "px-captcha",                              # Walmart (PerimeterX)
     "bm-verify", "/_sec/verify", "triggerinterstitialchallenge",  # Amazon (Akamai interstitial)
 )
+# Markers only a challenge page carries, looked for in bodies of any size: a
+# challenge can be large too (inline fonts and styles). Generic words stay with
+# BLOCK_MARKERS, and "challenge-platform" is left out because Cloudflare loads
+# its detection script from that path on ordinary pages as well.
+CHALLENGE_MARKERS = (
+    "<title>just a moment", "_cf_chl_opt",          # Cloudflare managed challenge
+    "bm-verify", "triggerinterstitialchallenge",    # Akamai interstitial
+    "<title>robot or human",                        # PerimeterX (Walmart)
+)
+CHALLENGE_WINDOW = 200_000
 RETRY_STATUSES = BLOCK_STATUSES | {500, 502, 504}
 DEFAULT_MIN_INTERVAL = 2.0  # seconds between requests to the same host
 
@@ -49,14 +59,22 @@ def block_reason(status_code: int | None, text: str, url: str = "") -> str | Non
         return f"HTTP {status_code}"
     if "/blocked" in (urlsplit(url).path or "").lower():
         return "redirected to a block page"
-    # Real result pages are large; bot-check pages are small. Only scan small bodies
-    # so a marker word inside a big page's scripts is not a false alarm.
+    # Real result pages are large; most bot-check pages are small. Generic words are
+    # only looked for in small bodies so one inside a big page's scripts is not a
+    # false alarm; challenge-only markers are looked for at any size.
     if status_code == 200 and len(text) < 50_000:
         head = text[:20_000].lower()
         for marker in BLOCK_MARKERS:
             if marker in head:
                 return f"bot-check page ({marker!r})"
-    return None
+    marker = challenge_marker(text) if status_code == 200 else None
+    return f"bot-check page ({marker!r})" if marker else None
+
+
+def challenge_marker(text: str) -> str | None:
+    """The first CHALLENGE_MARKERS entry in the top CHALLENGE_WINDOW chars of a body, or None."""
+    head = text[:CHALLENGE_WINDOW].lower()
+    return next((marker for marker in CHALLENGE_MARKERS if marker in head), None)
 
 
 def _wait_turn(url: str, min_interval: float) -> None:
@@ -88,9 +106,12 @@ def fetch(
 
     Each attempt uses the next impersonation target. Retries only on block
     statuses, transient 5xx and network errors, with a short backoff. Returns the last
-    response (or error) when every attempt fails.
+    response (or error) when every attempt fails, except that a block seen on any
+    attempt is returned instead, so a 429 followed by resets still reads as BLOCKED
+    and the run-level breaker skips the retailer.
     """
     last = FetchResult(url, None, "", None, 0, error="no attempt made")
+    blocked: FetchResult | None = None
     for i in range(max(1, attempts)):
         target = impersonate_order[i % len(impersonate_order)]
         _wait_turn(url, min_interval)
@@ -108,8 +129,10 @@ def fetch(
             )
             if last.status_code == 200 and not last.blocked_reason:
                 return last
+            if last.blocked_reason and blocked is None:
+                blocked = last
             if last.status_code not in RETRY_STATUSES and not last.blocked_reason:
-                return last  # e.g. 404: retrying with another fingerprint will not help
+                break  # e.g. 404: retrying with another fingerprint will not help
         except Exception as exc:  # curl_cffi raises its own error types
             last = FetchResult(
                 url, None, "", target, int((time.monotonic() - start) * 1000),
@@ -117,4 +140,4 @@ def fetch(
             )
         if i < max(1, attempts) - 1:
             time.sleep(1.5 * (i + 1))  # back off only when another attempt follows
-    return last
+    return blocked or last
