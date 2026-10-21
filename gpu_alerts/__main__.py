@@ -3,7 +3,7 @@
     python -m gpu_alerts [run]
     python -m gpu_alerts lookup "rtx 5070 ti" [--open-box] [--marketplace] [--top N]
     python -m gpu_alerts health [--query "rtx 5080"]
-    python -m gpu_alerts import-v1 gpu_alerts.json
+    python -m gpu_alerts import-v1 gpu_alerts.json [--force]
 """
 
 import argparse
@@ -28,6 +28,16 @@ def _name(rid: str) -> str:
     return retailers.display_name(rid)
 
 
+def _positive_int(text: str) -> int:
+    try:
+        value = int(text)
+    except ValueError:
+        value = 0
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"{text!r} is not a whole number of 1 or more")
+    return value
+
+
 def cmd_lookup(args: argparse.Namespace) -> int:
     model = catalog.by_id(args.gpu) or catalog.resolve(args.gpu)
     if model is None:
@@ -48,6 +58,10 @@ def cmd_lookup(args: argparse.Namespace) -> int:
     ]
     print(_table(rows, ["retailer", "status", "http", "raw", "listings", "best eligible", "detail"]))
     print()
+    if not any(r.ok for r in results):
+        # Not a market state: exit 1 as `health` does, so a script can tell.
+        print("No retailer answered (blocked, errors or all disabled), so there are no prices.")
+        return 1
     if not found:
         print("No eligible offers.")
         return 0
@@ -81,12 +95,17 @@ def cmd_import_v1(args: argparse.Namespace) -> int:
     from .store import Store
 
     with Store(config.DB_PATH) as store:
-        report = store.import_v1(args.path)
+        report = store.import_v1(args.path, force=args.force)
     for line in report.imported:
         print(f"imported {line}")
+    for line in report.updated:
+        print(f"updated  {line}")
     for line in report.skipped:
         print(f"skipped  {line}")
-    print(f"{len(report.imported)} imported, {len(report.skipped)} skipped, into {config.DB_PATH}")
+    print(
+        f"{len(report.imported)} imported, {len(report.updated)} updated, {len(report.skipped)} skipped,"
+        f" into {config.DB_PATH}"
+    )
     return 0
 
 
@@ -105,13 +124,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("gpu", help='catalog id or name, e.g. "rtx-5070-ti" or "RTX 5070 Ti"')
     p.add_argument("--open-box", action="store_true", help="count open-box and refurbished listings")
     p.add_argument("--marketplace", action="store_true", help="count third-party marketplace sellers")
-    p.add_argument("--top", type=int, default=10, help="how many offers to list (default 10)")
+    p.add_argument("--top", type=_positive_int, default=10, help="how many offers to list (default 10)")
     p.set_defaults(func=cmd_lookup)
     p = sub.add_parser("health", help="scan one query on every retailer and report status")
     p.add_argument("--query", default="rtx 5080", help='search string (default "rtx 5080")')
     p.set_defaults(func=cmd_health)
     p = sub.add_parser("import-v1", help="import alerts from the v1 gpu_alerts.json")
     p.add_argument("path")
+    p.add_argument(
+        "--force", action="store_true",
+        help="also set existing alerts to the file's target and channel (whether they already pinged stays)",
+    )
     p.set_defaults(func=cmd_import_v1)
     return parser
 
@@ -125,8 +148,9 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if getattr(args, "func", None) is None:
         args.func = cmd_run
-    if args.func is not cmd_run:
+    if args.func is not cmd_run:   # run() sets up its own logging
         logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
+        config.warn_unknown_retailers()
     return args.func(args)
 
 

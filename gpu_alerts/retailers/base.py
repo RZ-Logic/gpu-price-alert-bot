@@ -67,6 +67,11 @@ class ScrapeResult:
     # this like BLOCKED and skip the retailer for the rest of the run. When no
     # listings were collected at all, the status itself is BLOCKED.
     blocked_partway: bool = False
+    # The read is incomplete: a later page failed for any reason (block, network
+    # or HTTP error, parse error) after page 1 succeeded, or some rows could not
+    # be checked. The listings are real offers, but a deal that was not read may
+    # still exist, so this result is no evidence that an earlier deal is gone.
+    partial: bool = False
 
     @property
     def ok(self) -> bool:

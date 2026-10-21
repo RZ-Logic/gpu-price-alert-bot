@@ -268,6 +268,8 @@ def scan_models(
                 )
                 for rid in ids if rid in fresh or rid in blocked
             ]
+            # Only block evidence trips the breaker: a partial read after a timeout
+            # or parse error on a later page does not skip the retailer.
             blocked |= {
                 r.retailer for r in results
                 if Status(r.status) is Status.BLOCKED or getattr(r, "blocked_partway", False)

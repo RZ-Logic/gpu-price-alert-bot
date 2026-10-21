@@ -102,3 +102,36 @@ the first held-out split the two agents split the titles between them (even and
 odd row ids), so each held-out title was read by one blind labeler. Both agents
 labelled every row only in the out-of-distribution set (Addendum 2). The
 protocol, the targets and the scores are unchanged.
+
+## Addendum 3 (2026-10-21, v2.1): lower bounds, a changed matcher, corrections
+
+Everything above stands as fixed on 2026-10-12: the targets, the protocol, the
+label rules and the 5-row minimum for judging a query.
+
+- Lower bounds. `eval/evaluate.py` now prints, next to each precision, its
+  one-sided 95% exact (Clopper-Pearson) lower bound (`Plow`), overall and per
+  query. It is reported alongside the unchanged targets and is not a target:
+  pass and fail are still decided on the point estimates. It was added because
+  the per-query cells are small. 7 of 7 accepted rows (RTX 5090 on the held-out
+  split) bound precision only at 0.652, and 29 of 29 are needed to show 0.90.
+- Coverage. When a file has no scored rows for some of the 8 queries, `--check`
+  now prints "all met, but this file has scored rows for only N of the 8
+  pre-registered queries" and names them. That is not a miss and does not change
+  the exit code. The held-out and out-of-distribution files cover all 8.
+- The matcher was changed again after scoring. v2.1 changed
+  `gpu_alerts/matching.py` and the catalog after both test sets were scored,
+  with fixes from a three-way audit of v2.0. Re-run on 2026-10-21, the v2 counts
+  on the dev, held-out and out-of-distribution files are identical to the scored
+  runs, and `tests/test_eval.py` now pins them. Under Addendum 1 this is a new
+  matcher version: the existing sets are a regression check for it, and a
+  held-out claim for it needs a new held-out set.
+- The drift test. The note at the top says `tests/test_eval.py` fails if the
+  targets here and in `evaluate.py` drift apart. Until v2.1 that test only looked
+  for the strings 0.97 and 0.90 anywhere in this file, so an edit to the Targets
+  table alone went unnoticed. It now reads the Targets table, the list of 8
+  queries and the 5-row minimum, and compares each with the code.
+- Corrections. "Data and independence" describes `dev.jsonl` as page-1 search
+  results; its Canada Computers rows (17 to 53 per query) come from more than
+  the first page. Addendum 2's "869 listing titles" are 869 rows covering 325
+  distinct titles, because a title is scored once for each search that returned
+  it. All 238 correct rows are distinct titles.

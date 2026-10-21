@@ -27,6 +27,9 @@ MAX_PAGES = 2
 GPU_PRODUCT_TYPE = "Computer Video Cards"
 GPU_CATEGORY_ID = "6000199042202"   # Electronics > ... > Computer Components > Graphic Cards & GPU
 BLOCK_TEXT = ("robot or human", "px-captcha")
+# sellerType to first_party. Every captured GPU row is "EXTERNAL" (a marketplace
+# seller); "INTERNAL" marks an item Walmart sells itself. Other values are unknown.
+SELLER_TYPES = {"INTERNAL": True, "EXTERNAL": False}
 
 _NEXT_DATA_RE = re.compile(
     r'<script[^>]*id="__NEXT_DATA__"[^>]*>(.*?)</script>', re.DOTALL | re.IGNORECASE,
@@ -79,6 +82,17 @@ def _products(sr: dict) -> list[dict]:
         for item in (stack.get("items") or [])
         if isinstance(item, dict) and item.get("__typename") == "Product"
     ]
+
+
+def _primary(sr: dict) -> dict:
+    """The first item stack, which holds the search results proper."""
+    stacks = [s for s in sr["itemStacks"] if isinstance(s, dict)]
+    return stacks[0] if stacks else {}
+
+
+def _reported(stack: dict):
+    """Results a stack reports: its count, else meta.totalItemCount."""
+    return stack.get("count") or (stack.get("meta") or {}).get("totalItemCount") or 0
 
 
 def _category(item: dict) -> tuple[bool | None, str | None]:
@@ -154,9 +168,15 @@ def _url(canonical: str) -> str:
 def parse(payload: str | dict, query: str) -> list[Listing]:
     """Listings from a Walmart.ca search page (HTML, __NEXT_DATA__ JSON, or fixture)."""
     sr = _search_result(payload)
+    products = _products(sr)
+    reported = _reported(_primary(sr))
+    if not products and isinstance(reported, int) and reported > 0:
+        # Ad placeholders sit among the items, but a real page always has Product items.
+        raise ParseError(f"{reported} results reported but no Product items in itemStacks")
     out: list[Listing] = []
     seen: set[str] = set()
-    for item in _products(sr):
+    malformed = 0
+    for item in products:
         is_gpu, category = _category(item)
         if is_gpu is False:
             continue
@@ -165,20 +185,18 @@ def parse(payload: str | dict, query: str) -> list[Listing]:
         shipping = _shipping(item)
         canonical = item.get("canonicalUrl")
         if not title or price is None or not canonical:
+            malformed += 1
             continue
         sku = item.get("usItemId") or None
         key = sku or canonical
         if key in seen:
             continue  # sponsored rows can repeat an organic row
         seen.add(key)
-        seller_type = item.get("sellerType")
         seller = item.get("sellerName") or None
-        if seller_type:
-            first_party = seller_type != "EXTERNAL"
-        elif seller:
+        # Only the known sellerType values decide; anything new falls back to the name.
+        first_party = SELLER_TYPES.get(str(item.get("sellerType") or "").upper())
+        if first_party is None and seller:
             first_party = seller.lower().startswith("walmart")
-        else:
-            first_party = None
         was = _money((item.get("priceInfo") or {}).get("wasPrice") or "")
         # Listing.price is what the buyer pays before tax, so seller shipping is
         # added to both the price and the was-price.
@@ -197,20 +215,20 @@ def parse(payload: str | dict, query: str) -> list[Listing]:
             regular_price=was if was and was > price else None,
             category=category,
         ))
+    if malformed and not out:
+        raise ParseError(f"none of {malformed} graphics card rows had a name, price and url")
     return out
 
 
 def page_info(payload: str | dict) -> tuple[int, int, bool]:
     """(Product rows on the page, results the primary stack reports, hasMorePages)."""
     sr = _search_result(payload)
-    stacks = [s for s in sr["itemStacks"] if isinstance(s, dict)]
-    primary = stacks[0] if stacks else {}
+    primary = _primary(sr)
     organic = sum(
         1 for i in (primary.get("items") or [])
         if isinstance(i, dict) and i.get("__typename") == "Product" and not i.get("isSponsoredFlag")
     )
-    meta = primary.get("meta") or {}
-    reported = primary.get("count") or meta.get("totalItemCount") or 0
+    reported = _reported(primary)
     more = bool(sr.get("hasMorePages")) or (isinstance(reported, int) and reported > organic)
     return len(_products(sr)), int(reported or 0), more
 
@@ -225,7 +243,8 @@ def _blocked(res: http.FetchResult) -> str | None:
         for marker in BLOCK_TEXT:
             if marker in head:
                 return f"bot-check page ({marker!r})"
-    return None
+    marker = http.challenge_marker(res.text) if res.status_code == 200 else None
+    return f"bot-check page ({marker!r})" if marker else None
 
 
 def search(query: str) -> ScrapeResult:
@@ -257,11 +276,14 @@ def search(query: str) -> ScrapeResult:
                     n_page, reported, more = page_info(res.text)
                 except ParseError as exc:
                     failure = (Status.PARSE_ERROR, str(exc)[:200])
+                except Exception as exc:  # an odd row on page 2 must not discard page 1
+                    failure = (Status.PARSE_ERROR, f"unexpected {type(exc).__name__}: {exc}"[:200])
             if failure:
                 if page == 1:
                     result.status, result.detail = failure
                     return result
                 notes.append(f"page {page}: {failure[1]}")
+                result.partial = True
                 result.blocked_partway = failure[0] is Status.BLOCKED
                 break
             result.n_raw += n_page
@@ -281,8 +303,10 @@ def search(query: str) -> ScrapeResult:
             result.status = Status.BLOCKED
         else:
             result.status = Status.EMPTY
-        if not listings:
+        if not listings and result.n_raw:
             notes.append(f"{result.n_raw} rows, none in the graphics card category")
+        elif not listings:
+            notes.append("no results")
         result.detail = "; ".join(notes)
         return result
     except Exception as exc:  # search() must never raise

@@ -6,7 +6,9 @@ category (id 20397, verified 2026-10-12 through each product's categoryIds),
 then the SKUs that survive filtering go to the availability API in one batch
 for online stock. A failed availability call fails the whole scan (its own
 BLOCKED, NETWORK_ERROR or PARSE_ERROR, no listings), because stock-unknown
-rows would let sold-out cards become the best offer.
+rows would let sold-out cards become the best offer. For the same reason a SKU
+the answer leaves out, or gives no usable status, counts as sold out and marks
+the result partial; an answer with no usable status for any SKU fails the scan.
 """
 
 import json
@@ -242,8 +244,19 @@ def search(query: str) -> ScrapeResult:
                 result.status = failure[0]
                 result.detail = f"{detail}; {failure[1]}"
                 return result
+            unknown = sum(1 for l in listings if stock.get(l.sku) is None)
+            if unknown == len(listings):
+                result.status = Status.PARSE_ERROR
+                result.detail = f"{detail}; availability: no usable stock status for any of {unknown} SKUs"
+                return result
+            if unknown:
+                # Fail closed: a SKU the API left out, or answered with no usable
+                # status, counts as sold out. It may still be the deal, so the read
+                # is partial.
+                detail += f"; {unknown} stock unknown, counted as sold out"
+                result.partial = True
             listings = [
-                replace(l, in_stock=stock[l.sku]) if stock.get(l.sku) is not None else l
+                replace(l, in_stock=stock[l.sku] if stock.get(l.sku) is not None else False)
                 for l in listings
             ]
         result.listings = listings

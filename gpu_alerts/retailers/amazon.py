@@ -186,13 +186,18 @@ def parse(payload: str, query: str) -> list[Listing]:
     category = GPU_CATEGORY if _node_filtered(payload) else None
     out: list[Listing] = []
     seen: set[str] = set()
+    organic = untitled = 0
     for card in cards:
         asin = (card.get("data-asin") or "").strip()
         if not asin or asin in seen or _is_sponsored(card):
             continue
+        organic += 1
         title = _title(card)
         price = _price(card)
-        if not title or price is None:
+        if not title:
+            untitled += 1
+            continue
+        if price is None:
             continue
         seen.add(asin)
         merchant = _merchant(card)
@@ -210,6 +215,15 @@ def parse(payload: str, query: str) -> list[Listing]:
             regular_price=_regular_price(card, price),
             category=category,
         ))
+    if not out:
+        # Cards without an offer are real ("No featured offers", "See options"), so
+        # a renamed price markup shows as no card on the page carrying it at all.
+        if not any((card.get("data-asin") or "").strip() for card in cards):
+            raise ParseError(f"none of {len(cards)} result cards had a data-asin")
+        if organic and untitled == organic:
+            raise ParseError(f"none of {organic} organic cards had a title")
+        if organic and not soup.select(f"{_CARD_SELECTOR} span.a-price"):
+            raise ParseError(f"none of {len(cards)} cards had span.a-price markup")
     return out
 
 
@@ -244,11 +258,14 @@ def search(query: str) -> ScrapeResult:
                     n_page, shown, total = page_info(res.text)
                 except ParseError as exc:
                     failure = (Status.PARSE_ERROR, str(exc)[:200])
+                except Exception as exc:  # odd markup on page 2 must not discard page 1
+                    failure = (Status.PARSE_ERROR, f"unexpected {type(exc).__name__}: {exc}"[:200])
             if failure:
                 if page == 1:
                     result.status, result.detail = failure
                     return result
                 notes.append(f"page {page}: {failure[1]}")
+                result.partial = True
                 result.blocked_partway = failure[0] is Status.BLOCKED
                 break
             result.n_raw += n_page
