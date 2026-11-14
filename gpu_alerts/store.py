@@ -16,8 +16,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from . import catalog
-from .pricing import SKIPPED_PREFIX
-from .retailers.base import Listing, ScrapeResult, Status
+from .pricing import ANY_PICKUP, SKIPPED_PREFIX, pickup_key
+from .retailers.base import Listing, PickupStore, ScrapeResult, Status
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS alerts (
@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS alerts (
     last_price_cents INTEGER,
     last_checked_at TEXT,
     created_at TEXT NOT NULL,
+    pickup TEXT,
     UNIQUE (user_id, model_id)
 );
 CREATE TABLE IF NOT EXISTS scans (
@@ -63,7 +64,9 @@ CREATE TABLE IF NOT EXISTS snapshots (
     in_stock INTEGER,
     first_party INTEGER,
     condition TEXT NOT NULL,
-    url TEXT NOT NULL
+    url TEXT NOT NULL,
+    pickup_stores TEXT,
+    pickup_keys TEXT
 );
 CREATE INDEX IF NOT EXISTS snapshots_scan ON snapshots (scan_id);
 CREATE INDEX IF NOT EXISTS snapshots_model_at ON snapshots (model_id, scanned_at);
@@ -100,6 +103,16 @@ _ALERT_MIGRATIONS = {
     "holding_retailers": "TEXT",            # comma-separated retailer ids, see alerts.AlertState
     "held_streak": "INTEGER NOT NULL DEFAULT 0",
     "observed_at": "TEXT",                 # scanned_at of the newest scan the state reflects
+    "pickup": "TEXT",                      # comma-separated pricing.parse_pickup tokens (v2.2)
+}
+
+# Snapshot columns added in v2.2, for in-store pickup. pickup_stores is JSON
+# ([[province, name, quantity], ...]) for reading back; pickup_keys holds the
+# same branches as "|on|mississauga|" (province and branch keys) so a history
+# read can match pickup tokens in SQL. Both are NULL when no branch has stock.
+_SNAPSHOT_MIGRATIONS = {
+    "pickup_stores": "TEXT",
+    "pickup_keys": "TEXT",
 }
 
 
@@ -144,6 +157,54 @@ def _int_or_none(value: bool | None) -> int | None:
     return None if value is None else int(value)
 
 
+def _cell_key(text: str) -> str:
+    """pickup_key without the pickup_keys delimiter, so one key never spans two."""
+    return pickup_key(text.replace("|", " "))
+
+
+def _encode_stores(stores: Iterable[PickupStore]) -> tuple[str | None, str | None]:
+    """(pickup_stores JSON, pickup_keys) for a snapshot row; (None, None) without branches."""
+    stores = tuple(stores)
+    if not stores:
+        return None, None
+    data = json.dumps([[s.province, s.name, s.quantity] for s in stores], ensure_ascii=False)
+    keys = {_cell_key(s.province) for s in stores} | {_cell_key(s.name) for s in stores}
+    return data, "|" + "|".join(sorted(keys)) + "|"
+
+
+def _decode_stores(text: str | None) -> tuple[PickupStore, ...]:
+    if not text:
+        return ()
+    try:
+        return tuple(PickupStore(str(p), str(n), str(q)) for p, n, q in json.loads(text))
+    except (TypeError, ValueError):
+        return ()
+
+
+def _pickup_tokens(pickup: Iterable[str]) -> str | None:
+    """Alert pickup tokens as stored: normalised, sorted and comma-joined, None when pickup is off.
+
+    Normalised here so a raw token ("ON") matches in pricing.Policy the same way
+    it matches in the SQL history filter.
+    """
+    tokens = sorted({k for k in (pickup_key(t) for t in pickup) if k})
+    if any("," in t for t in tokens):
+        raise ValueError("pickup tokens cannot contain commas")
+    return ",".join(tokens) or None
+
+
+def _matching_stores(stores: tuple[PickupStore, ...], pickup: frozenset[str]) -> tuple[PickupStore, ...]:
+    """The branches a read with these tokens asks for; all of them without tokens or with "*".
+
+    Tokens and branches are keyed with _cell_key, as in _policy_sql, so a row the
+    SQL filter lets through always keeps the branches that matched it.
+    """
+    if not pickup or ANY_PICKUP in pickup:
+        return stores
+    tokens = {_cell_key(t) for t in pickup}
+    return tuple(s for s in stores if _cell_key(s.province) in tokens or _cell_key(s.name) in tokens)
+
+
 @dataclass(frozen=True)
 class Alert:
     id: int
@@ -166,6 +227,7 @@ class Alert:
     holding_retailers: frozenset[str] = frozenset()
     held_streak: int = 0
     observed_at: datetime | None = None
+    pickup: frozenset[str] = frozenset()   # pricing.parse_pickup tokens; empty means pickup is off
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> "Alert":
@@ -185,6 +247,7 @@ class Alert:
             holding_retailers=_split(row["holding_retailers"]) if "holding_retailers" in keys else frozenset(),
             held_streak=row["held_streak"] if "held_streak" in keys else 0,
             observed_at=parse_iso(row["observed_at"]) if "observed_at" in keys else None,
+            pickup=_split(row["pickup"]) if "pickup" in keys else frozenset(),
         )
 
 
@@ -202,6 +265,9 @@ class Offer:
     first_party: bool | None
     condition: str
     url: str
+    # Branches with pickup stock. A read with pickup tokens keeps only the
+    # branches they name; without tokens (or with "*") every stored branch.
+    pickup_stores: tuple[PickupStore, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -247,12 +313,31 @@ def _identity_guard(
     return sql, params
 
 
-def _policy_sql(include_open_box: bool, include_marketplace: bool) -> str:
+def _policy_sql(
+    include_open_box: bool, include_marketplace: bool, pickup: frozenset[str] = frozenset()
+) -> tuple[str, list]:
+    """SQL condition on snapshots `o` for a read policy, with its bound parameters.
+
+    A row not in stock online (in_stock = 0, stored since v2.2 for pickup) counts
+    only when the read asks for pickup and one of its branches matches a token,
+    so reads without pickup see exactly the v2.1 history.
+    """
     conditions = "('new', 'open_box', 'refurbished')" if include_open_box else "('new')"
     sql = f"o.condition IN {conditions}"
+    params: list = []
     if not include_marketplace:
         sql += " AND (o.first_party IS NULL OR o.first_party = 1)"
-    return sql
+    stock = "o.in_stock IS NULL OR o.in_stock != 0"
+    if ANY_PICKUP in pickup:
+        stock += " OR o.pickup_keys IS NOT NULL"
+    else:
+        tokens = sorted({_cell_key(t) for t in pickup} - {""})
+        if tokens:
+            stock += " OR (o.pickup_keys IS NOT NULL AND ("
+            stock += " OR ".join("instr(o.pickup_keys, ?) > 0" for _ in tokens) + "))"
+            params.extend(f"|{t}|" for t in tokens)
+    sql += f" AND ({stock})"
+    return sql, params
 
 
 class Store:
@@ -268,11 +353,15 @@ class Store:
             self._conn.execute("PRAGMA synchronous=NORMAL")
             self._conn.executescript(SCHEMA)
             cols = {r[1] for r in self._conn.execute("PRAGMA table_info(alerts)")}
+            snap_cols = {r[1] for r in self._conn.execute("PRAGMA table_info(snapshots)")}
             with self._conn:
                 self._conn.execute("BEGIN")   # a new column and its backfill land together
                 for name, definition in _ALERT_MIGRATIONS.items():
                     if name not in cols:
                         self._conn.execute(f"ALTER TABLE alerts ADD COLUMN {name} {definition}")
+                for name, definition in _SNAPSHOT_MIGRATIONS.items():
+                    if name not in snap_cols:
+                        self._conn.execute(f"ALTER TABLE snapshots ADD COLUMN {name} {definition}")
                 if "holding_retailers" not in cols:
                     # Before v2.1 only the notified retailer held a disarmed alert.
                     self._conn.execute("UPDATE alerts SET holding_retailers = notified_retailer")
@@ -303,16 +392,19 @@ class Store:
         guild_id: int | None = None,
         include_open_box: bool = False,
         include_marketplace: bool = False,
+        pickup: frozenset[str] = frozenset(),
         max_per_user: int | None = None,
         created_at: datetime | None = None,
     ) -> tuple[Alert, bool]:
         """Create or update one alert. Returns (alert, created).
 
         Updating an existing alert always works, even at the cap, and re-arms it
-        so the new target is judged fresh.
+        so the new target (or open-box, marketplace or pickup setting) is judged
+        fresh. pickup is pricing.parse_pickup tokens; empty turns pickup off.
         """
         if target_cents <= 0:
             raise ValueError("target must be positive")
+        pickup_text = _pickup_tokens(pickup)
         with self._lock, self._conn:
             existing = self._conn.execute(
                 "SELECT id FROM alerts WHERE user_id = ? AND model_id = ?", (user_id, model_id)
@@ -326,20 +418,21 @@ class Store:
                         raise AlertLimitError(f"limit of {max_per_user} alerts reached")
                 self._conn.execute(
                     "INSERT INTO alerts (user_id, channel_id, guild_id, model_id, target_cents,"
-                    " include_open_box, include_marketplace, armed, created_at)"
-                    " VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)",
+                    " include_open_box, include_marketplace, pickup, armed, created_at)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)",
                     (user_id, channel_id, guild_id, model_id, target_cents,
-                     int(include_open_box), int(include_marketplace), iso(created_at or utcnow())),
+                     int(include_open_box), int(include_marketplace), pickup_text,
+                     iso(created_at or utcnow())),
                 )
             else:
                 self._conn.execute(
                     "UPDATE alerts SET channel_id = ?, guild_id = ?, target_cents = ?,"
-                    " include_open_box = ?, include_marketplace = ?, armed = 1,"
+                    " include_open_box = ?, include_marketplace = ?, pickup = ?, armed = 1,"
                     " notified_price_cents = NULL, notified_at = NULL, above_streak = 0,"
                     " notified_retailer = NULL, holding_retailers = NULL, held_streak = 0,"
                     " rev = rev + 1 WHERE id = ?",
                     (channel_id, guild_id, target_cents, int(include_open_box),
-                     int(include_marketplace), existing["id"]),
+                     int(include_marketplace), pickup_text, existing["id"]),
                 )
             row = self._conn.execute(
                 "SELECT * FROM alerts WHERE user_id = ? AND model_id = ?", (user_id, model_id)
@@ -491,7 +584,11 @@ class Store:
         n_retailers: int,
         at: datetime | None = None,
     ) -> int:
-        """Store the matched offers of one scan of one model. Returns the scan id."""
+        """Store the matched offers of one scan of one model. Returns the scan id.
+
+        A listing's pickup branches are stored with it, so pickup-only offers
+        (in_stock 0) can be read back by the alerts that ask for pickup.
+        """
         stamp = iso(at or utcnow())
         with self._lock, self._conn:
             cur = self._conn.execute(
@@ -501,12 +598,13 @@ class Store:
             scan_id = cur.lastrowid
             self._conn.executemany(
                 "INSERT INTO snapshots (scan_id, scanned_at, model_id, retailer, sku, title,"
-                " price_cents, in_stock, first_party, condition, url)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                " price_cents, in_stock, first_party, condition, url, pickup_stores, pickup_keys)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     (scan_id, stamp, model_id, li.retailer, li.sku, li.title[:300],
                      to_cents(li.price), _int_or_none(li.in_stock),
-                     _int_or_none(li.first_party), li.condition, li.url)
+                     _int_or_none(li.first_party), li.condition, li.url,
+                     *_encode_stores(getattr(li, "pickup_stores", ())))
                     for li in offers
                 ],
             )
@@ -519,14 +617,19 @@ class Store:
         *,
         include_open_box: bool = False,
         include_marketplace: bool = False,
+        pickup: frozenset[str] = frozenset(),
     ) -> list[tuple[datetime, int | None]]:
-        """(scanned_at, best price) per scan that reached at least one retailer, oldest first."""
+        """(scanned_at, best price) per scan that reached at least one retailer, oldest first.
+
+        Pickup-only offers count only for a read with matching pickup tokens.
+        """
+        policy, params = _policy_sql(include_open_box, include_marketplace, pickup)
         sql = (
             "SELECT s.scanned_at, MIN(o.price_cents) AS best FROM scans s"
-            f" LEFT JOIN snapshots o ON o.scan_id = s.id AND {_policy_sql(include_open_box, include_marketplace)}"
+            f" LEFT JOIN snapshots o ON o.scan_id = s.id AND {policy}"
             " WHERE s.model_id = ? AND s.n_ok > 0"
         )
-        params: list = [model_id]
+        params.append(model_id)
         if days is not None:
             sql += " AND s.scanned_at >= ?"
             params.append(iso(utcnow() - timedelta(days=days)))
@@ -540,13 +643,11 @@ class Store:
         *,
         include_open_box: bool = False,
         include_marketplace: bool = False,
+        pickup: frozenset[str] = frozenset(),
     ) -> PriceStats:
-        history = self.best_history(
-            model_id, days, include_open_box=include_open_box, include_marketplace=include_marketplace
-        )
-        latest = self.best_history(
-            model_id, None, include_open_box=include_open_box, include_marketplace=include_marketplace
-        )[-1:]
+        policy = dict(include_open_box=include_open_box, include_marketplace=include_marketplace, pickup=pickup)
+        history = self.best_history(model_id, days, **policy)
+        latest = self.best_history(model_id, None, **policy)[-1:]
         prices = [p for _, p in history if p is not None]
         latest_at, latest_cents = latest[0] if latest else (None, None)
         return PriceStats(
@@ -564,10 +665,12 @@ class Store:
         max_age: timedelta | None = None,
         include_open_box: bool = False,
         include_marketplace: bool = False,
+        pickup: frozenset[str] = frozenset(),
     ) -> tuple[datetime | None, list[Offer]]:
         """Offers from the latest scan that reached a retailer, cheapest first.
 
         Returns (None, []) when there is no such scan or it is older than max_age.
+        Pickup-only offers come back only for matching pickup tokens.
         """
         rows = self._query(
             "SELECT id, scanned_at FROM scans WHERE model_id = ? AND n_ok > 0"
@@ -579,16 +682,19 @@ class Store:
         at = parse_iso(rows[0]["scanned_at"])
         if max_age is not None and utcnow() - at > max_age:
             return None, []
+        policy, params = _policy_sql(include_open_box, include_marketplace, pickup)
         offer_rows = self._query(
-            f"SELECT * FROM snapshots o WHERE o.scan_id = ? AND {_policy_sql(include_open_box, include_marketplace)}"
+            f"SELECT * FROM snapshots o WHERE o.scan_id = ? AND {policy}"
             " ORDER BY o.price_cents, o.retailer",
-            (rows[0]["id"],),
+            [rows[0]["id"], *params],
         )
+        tokens = frozenset(pickup)
         return at, [
             Offer(
                 scanned_at=at, model_id=r["model_id"], retailer=r["retailer"], sku=r["sku"],
                 title=r["title"], price_cents=r["price_cents"], in_stock=_bool(r["in_stock"]),
                 first_party=_bool(r["first_party"]), condition=r["condition"], url=r["url"],
+                pickup_stores=_matching_stores(_decode_stores(r["pickup_stores"]), tokens),
             )
             for r in offer_rows
         ]

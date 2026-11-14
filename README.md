@@ -16,7 +16,7 @@
   <a href="https://discordpy.readthedocs.io/"><img src="https://img.shields.io/badge/Discord-slash_commands-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord slash commands"/></a>
   <img src="https://img.shields.io/badge/Retailers-6_Canadian-D97706?style=for-the-badge" alt="Six Canadian retailers"/>
   <img src="https://img.shields.io/badge/Runtime_AI-none-0EA5E9?style=for-the-badge" alt="No model at runtime"/>
-  <img src="https://img.shields.io/badge/Status-v2.1.0-orange?style=for-the-badge" alt="Status v2.1.0"/>
+  <img src="https://img.shields.io/badge/Status-v2.2.0-orange?style=for-the-badge" alt="Status v2.2.0"/>
 </p>
 
 <p align="center">
@@ -96,10 +96,13 @@ A variable already set in your terminal wins over `.env`. A line may start with 
 
 ```bash
 python -m gpu_alerts lookup "rtx 5070 ti"   # live prices in the terminal, no Discord needed
+python -m gpu_alerts lookup "rtx 5090" --pickup ON   # also count Canada Computers in-store pickup in Ontario
 python -m gpu_alerts                        # start the bot
 ```
 
 On start the bot logs an invite link with the permissions it needs (View Channels, Send Messages, Embed Links, Send Messages in Threads; scopes `bot` and `applications.commands`), then the check interval and the retailers it will search. Open the link once to add the bot to your server.
+
+Upgrading from v2.1? Back up `data/gpu_alerts.sqlite3`, then start the bot; the database gains its pickup columns on the first start, and existing alerts keep pickup off. Going back to v2.1 needs that backup, or `DELETE FROM snapshots WHERE in_stock = 0` first: v2.1 would read the pickup-only rows v2.2 records as normal offers and report them as 30-day lows.
 
 Upgrading from v2.0? Run `python -m pip install -r requirements.txt` again (it now sets a minimum certifi version, for a certificate advisory), then start the bot. The database gains its new columns on the first start.
 
@@ -146,7 +149,7 @@ Walmart answered `429 Too Many Requests` on that run, after about three hours of
 
 | Command | What it does |
 |---|---|
-| `/alert gpu target [open_box] [marketplace]` | Ping when the best eligible offer is at or under `target` (CAD, before tax, $100 to $20,000). Up to 10 alerts per user; setting one again updates it. The reply warns when the target is below the model's price floor and can never be reached. Set in a channel where the bot cannot post, the alert pings by DM. |
+| `/alert gpu target [open_box] [marketplace] [pickup]` | Ping when the best eligible offer is at or under `target` (CAD, before tax, $100 to $20,000). Up to 10 alerts per user; setting one again updates it. The reply warns when the target is below the model's price floor and can never be reached. Set in a channel where the bot cannot post, the alert pings by DM. `pickup` (optional, Canada Computers only) also counts cards sold out online that a branch has in store; see below. |
 | `/remove gpu` · `/list` | Remove an alert; list yours with the last price (or "nothing eligible") and when it was checked, and whether it is watching or already notified. |
 | `/check` | Check your alerts now (once every 5 minutes). If the reply cannot be delivered, the alerts it would have reported are put back and the next background check pings them. |
 | `/lookup gpu` | Live prices at all six retailers with a status line per retailer (once every 30 seconds per user). |
@@ -159,7 +162,7 @@ Walmart answered `429 Too Many Requests` on that run, after about three hours of
 | Retailer | How it reads prices | Stock and seller |
 |---|---|---|
 | Best Buy | Best Buy's JSON search API (its web pages block automated requests), one page of up to 100 rows in Best Buy's relevance order, then its stock API | Online stock per SKU; a SKU the stock API leaves unanswered counts as sold out; marketplace sellers flagged; bundles dropped |
-| Canada Computers | The site's JSON search, sorted by price and limited to the graphics-card category, up to 4 pages of 24 | Online availability; open box flagged |
+| Canada Computers | The site's JSON search, sorted by price and limited to the graphics-card category, up to 4 pages of 24 | Online availability; open box flagged; branches with new units in store, read from the same search |
 | Memory Express | The video-card category page filtered by your search, one page of up to 120 (the search page is behind a Cloudflare challenge) | Out of stock and special order flagged |
 | Newegg | The JSON state embedded in the search page, In Stock filter, up to 2 pages of 36 | Marketplace sellers flagged; open box and refurbished from the data; shipping included in the price |
 | Amazon.ca | The Graphics Cards category, up to 2 pages; sponsored cards skipped | In stock when a buy button is shown; sold by Amazon.ca from the buy-box merchant id |
@@ -168,6 +171,8 @@ Walmart answered `429 Too Many Requests` on that run, after about three hours of
 Requests use pinned browser TLS fingerprints (`curl_cffi`), at least 2 seconds apart per site (10 seconds for Amazon.ca), with retries on blocks and transient errors. A block stays a block when a retry then times out or fails, and a bot-check page is recognised at any size. When a site's results come back with rows but none the adapter can read, the retailer reports `parse_error`, not an empty result, so a layout change shows up in `/health` and in the owner's DMs.
 
 **What counts as an offer.** By default a listing must match the model exactly, be at or above a sanity floor for that model (so a $22 riser cable never counts), be new, not be marked sold out, and not come from a marketplace seller. `open_box:True` adds open-box and refurbished listings; `marketplace:True` adds third-party sellers (needed for Walmart).
+
+**In-store pickup (Canada Computers, opt-in).** Canada Computers often marks a card "Online - Sold Out" but "In Store - Available for Pickup". By default such a card is sold out, as in v2.1. Set `pickup` to province codes or branch names, comma-separated (`pickup:ON`, `pickup:Mississauga, Oakville`, `pickup:ON, Gatineau`), and the alert also counts a card when one of those branches has new units in store. Provinces with branches are AB, BC, NS, ON and QC (full names such as "Ontario" work too). Case, dots and accents are ignored, so "st. catharines" and "Montréal" match. A word that is not a branch or province is refused with the closest names, and the alert is not saved. Only new units at real branches count: never the online warehouse, never open-box units. The ping names the matching branches with their counts, for example "In-store pickup only: Mississauga (1), North York Centerpoint Mall (1), Toronto Downtown (1)", and a branch outside your list never fires it. Leave `pickup` blank to turn it off; changing it re-arms the alert. In the terminal, `lookup --pickup` takes the same text.
 
 **When it pings.** Once, when the best offer first reaches your target, and again only if the price falls a further 3% or $25. Every retailer that had an offer at or under your target then holds the alert. The alert re-arms after two scans above target (or with nothing eligible), counting from the scan in which the last of those retailers answered completely. So a retailer that is blocked, or whose later pages failed, cannot cause a repeat ping, and a restock after a sell-out pings again. A partial read (a later page failed, or Best Buy gave no stock answer for some cards) still counts for prices and pings, but it is no proof that a deal is gone. A retailer that never answers completely lets go after 24 scans above target, about a day at the default interval. Delivery goes to the alert's channel, then falls back to a DM. If both fail, the alert stays armed and is tried again every check, and the owner gets one DM about it.
 
@@ -208,7 +213,7 @@ All six returned results live for the eight test models on 2026-10-12. Amazon.ca
 
 ### How it was reviewed
 
-Built from a live audit of v1 and a survey of existing GitHub projects. After the v2.0 build, three reviewers raised 27 findings; every high and medium one was fixed with a test. For v2.1, three independent AI audits of v2.0 (Claude, Gemini and GPT) were cross-checked against each other. An issue was kept only when at least two agents confirmed it, one of them after trying to refute it. That left 54 issues: 10 medium, 44 low and none high. All 10 medium issues and 37 low ones are fixed, 6 low ones in part, and 1 is kept as it is by choice; what remains is under [Limitations](#-limitations). The 798 offline tests run in CI on Linux and Windows, and any test that tries to reach a retailer fails. The record is in [`CHANGELOG.md`](CHANGELOG.md).
+Built from a live audit of v1 and a survey of existing GitHub projects. After the v2.0 build, three reviewers raised 27 findings; every high and medium one was fixed with a test. For v2.1, three independent AI audits of v2.0 (Claude, Gemini and GPT) were cross-checked against each other. An issue was kept only when at least two agents confirmed it, one of them after trying to refute it. That left 54 issues: 10 medium, 44 low and none high. All 10 medium issues and 37 low ones are fixed, 6 low ones in part, and 1 is kept as it is by choice; what remains is under [Limitations](#-limitations). The offline tests (857 since v2.2) run in CI on Linux and Windows, and any test that tries to reach a retailer fails. The record is in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -224,6 +229,7 @@ Built from a live audit of v1 and a survey of existing GitHub projects. After th
 - **It runs only while your computer is on**, and alerts posted in a server channel show your target to everyone in that channel. Alert decisions use the computer's clock; if it jumps backwards, they pause until the clock passes the last saved scan.
 - **A failed save can repeat a ping once.** If saving an alert's state fails right after a ping (the database locked by another program, a full disk), the bot keeps that state in memory and saves it before judging the alert again. A restart in between can repeat that ping once.
 - **Matcher gaps.** Of the code review's 100 trick titles, 11 still pass the matcher on its own: six prebuilt PCs that call the GPU a card and name no CPU and few or no specs ("Skytech Gaming Desktop - RTX 5080 16GB GPU"), a motherboard, a card bundled with a motherboard that is named without the word, a power-connector title, and two used cards, which the matcher leaves to each adapter's condition check (that check reads common wording such as "(Used)", not every phrasing). Accessory titles that carry a VRAM size and have no card noun right before the accessory word ("RTX 5080 16GB Cooler Shroud Only") pass too. Each retailer's category filter removes most such listings before matching, and the price floor stops cheap accessories. A real card titled "... Perfect for Gaming RTX 5070 Builds" is still rejected as an accessory, and French used or refurbished wording is not read as used.
+- **Pickup is Canada Computers only, and read from its search.** The branch counts are what the search JSON shows at scan time; the bot does not reserve a unit or check the product page, so a card can be gone by the time you get to the store. The price is the site's online price. Memory Express has no pickup option: a card it marks Not Available Online, Out of Stock or Special Order counts as sold out. The other retailers do not report branch stock. `/lookup`, `/prices` and `/trend` count online stock only.
 - **Pre-orders count as in stock at Canada Computers.** Its "Online - Available for Pre-order" and "Online - Available to Order" labels are treated as buyable on purpose. So far they were seen only on laptops, prebuilts and accessories.
 - **Open review items.** From the v2.0 review: `/check` and `/prices` have no overall time limit; Ctrl+C waits for a running scan; a `# comment` after a `.env` value becomes part of the value; Walmart sponsored rows without category data reach the matcher. From the v2.1 review: if Canada Computers changes both its category ids and its category names, its scan reports an empty result instead of a parse error.
 - **Upgrading from v2.0.** Alerts that people outside the allowed servers set before v2.1 are still checked and still ping until they are removed. Those people can remove them with `/list` and `/remove`, which work in any server and in DMs. In guild mode (`DISCORD_GUILD_ID` set) the commands exist only in that server, so you remove such alerts yourself, from the `alerts` table of the database (`data/gpu_alerts.sqlite3` by default).
@@ -240,13 +246,13 @@ Built from a live audit of v1 and a survey of existing GitHub projects. After th
 | [`docs/build-decisions.md`](docs/build-decisions.md) | Why a rewrite, why rules and not a model for matching, why JSON endpoints and no browser, and the other choices. |
 | [`eval/README.md`](eval/README.md) | How the matcher is measured and how to rerun it. |
 | [`eval/PREREGISTRATION.md`](eval/PREREGISTRATION.md) | The targets and protocol, fixed before scoring, with the dated addenda and erratum added since. |
-| [`CHANGELOG.md`](CHANGELOG.md) | v1, v2.0 and v2.1: what changed and how each was reviewed. |
+| [`CHANGELOG.md`](CHANGELOG.md) | v1, v2.0, v2.1 and v2.2: what changed and how each was reviewed. |
 
 Development (with the virtual environment active):
 
 ```bash
 python -m pip install -r requirements-dev.txt   # adds pytest
-python -m pytest -q                       # 798 offline tests, no network, no token
+python -m pytest -q                       # 857 offline tests, no network, no token
 python -m pytest -q -m live               # live smoke tests against each retailer
 python -m gpu_alerts health               # one search on every retailer, with status and timing
 python eval/evaluate.py eval/heldout.jsonl --label-field gold_label --check

@@ -150,3 +150,41 @@ def test_import_v1_twice_reports_existing_alerts_as_skipped(tmp_path, monkeypatc
     assert "updated  111 RTX 5080 -> rtx-5080 at $1,500.00" in capsys.readouterr().out
     with Store(config.DB_PATH) as s:
         assert s.list_alerts(111)[0].target_cents == 150_000
+
+
+def _pickup_card(*stores, price=1399.0):
+    from gpu_alerts.retailers.base import PickupStore
+
+    return Listing(retailer="canadacomputers", title="PNY RTX 5080 16GB Triple Fan", price=price,
+                   url="https://example.test/cc", in_stock=False,
+                   pickup_stores=tuple(PickupStore(*s) for s in stores))
+
+
+def test_lookup_pickup_counts_branches_and_names_them(monkeypatch, capsys):
+    card = _pickup_card(("ON", "Mississauga", "1"), ("BC", "Burnaby", "2"))
+    monkeypatch.setattr(pricing, "scan", lambda q: [_ok("bestbuy", *_listings(1)), _ok("canadacomputers", card)])
+    assert cli.main(["lookup", "rtx-5080", "--pickup", "on"]) == 0
+    out = capsys.readouterr().out
+    assert "Top 2 of 2 eligible offers:" in out
+    assert " 1. $ 1,399.00" in out and "[in-store pickup only: Mississauga (1)]" in out and "Burnaby" not in out
+    # Without --pickup the card sold out online does not count, as before.
+    assert cli.main(["lookup", "rtx-5080"]) == 0
+    out = capsys.readouterr().out
+    assert "Top 1 of 1 eligible offers:" in out and "$ 1,399.00" not in out
+
+
+def test_lookup_pickup_outside_the_branches_asked_for_does_not_count(monkeypatch, capsys):
+    card = _pickup_card(("BC", "Burnaby", "2"))
+    monkeypatch.setattr(pricing, "scan", lambda q: [_ok("canadacomputers", card)])
+    assert cli.main(["lookup", "rtx-5080", "--pickup", "Oakville, Burlington"]) == 0
+    assert "No eligible offers." in capsys.readouterr().out
+
+
+def test_lookup_pickup_with_unknown_words_exits_2_before_scanning(monkeypatch, capsys):
+    def scan(q):
+        raise AssertionError("no scan for refused pickup text")
+
+    monkeypatch.setattr(pricing, "scan", scan)
+    assert cli.main(["lookup", "rtx-5080", "--pickup", "ON, Misisauga"]) == 2
+    err = capsys.readouterr().err
+    assert "Misisauga (did you mean Mississauga?)" in err and "province code" in err

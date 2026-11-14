@@ -6,7 +6,7 @@ import pytest
 
 from gpu_alerts import catalog, pricing, retailers
 from gpu_alerts.pricing import Policy
-from gpu_alerts.retailers.base import Listing, ScrapeResult, Status
+from gpu_alerts.retailers.base import Listing, PickupStore, ScrapeResult, Status
 
 M5080 = catalog.by_id("rtx-5080")
 
@@ -206,3 +206,192 @@ def test_status_label_explains_why_nothing_is_eligible():
     assert pricing.status_label(open_box, None, model, yes) == "open box only (1 found)"
     no = lambda title, m: type("M", (), {"ok": False})()
     assert pricing.status_label(sold_out, None, model, no) == "no match"
+
+
+# In-store pickup (v2.2). Canada Computers rows sold out online but held by a branch.
+
+TORONTO = PickupStore("ON", "Toronto Downtown", "1")
+NORTH_YORK = PickupStore("ON", "North York Centerpoint Mall", "1")
+MISSISSAUGA = PickupStore("ON", "Mississauga", "1")
+RICHMOND_BC = PickupStore("BC", "Richmond", "2")
+
+
+def CC(price, *stores, in_stock=False, **kw):
+    """A Canada Computers listing, sold out online unless in_stock says so, held by the given branches."""
+    kw.setdefault("first_party", True)
+    return L(price, retailer="canadacomputers", in_stock=in_stock, pickup_stores=tuple(stores), **kw)
+
+
+def test_pickup_key_folds_case_dots_spaces_and_accents():
+    assert pricing.pickup_key("  St.  Catharines ") == "st catharines"
+    assert pricing.pickup_key("MONTRÉAL") == "montreal"
+    assert pricing.pickup_key("Québec City") == "quebec city"
+
+
+def test_parse_pickup():
+    assert pricing.parse_pickup("ON") == (frozenset({"on"}), [])
+    assert pricing.parse_pickup("Oakville, burlington") == (frozenset({"oakville", "burlington"}), [])
+    assert pricing.parse_pickup("on, BC, Mississauga") == (frozenset({"on", "bc", "mississauga"}), [])
+    assert pricing.parse_pickup("St. Catharines") == (frozenset({"st catharines"}), [])
+    assert pricing.parse_pickup("north york   centerpoint mall") == (frozenset({"north york centerpoint mall"}), [])
+    assert pricing.parse_pickup("Ontario, Québec") == (frozenset({"on", "qc"}), [])
+    assert pricing.parse_pickup("Marché Central") == (frozenset({"marche central"}), [])
+    # Richmond (BC) and Richmond Hill (ON) are two branches.
+    assert pricing.parse_pickup("Richmond, Richmond Hill") == (frozenset({"richmond", "richmond hill"}), [])
+
+
+def test_parse_pickup_blank_means_off_and_unknown_words_come_back_as_typed():
+    for blank in (None, "", "   ", ",", " , ,"):
+        assert pricing.parse_pickup(blank) == (frozenset(), [])
+    tokens, unknown = pricing.parse_pickup("ON, Winnipeg , Online, *, nowhere")
+    assert tokens == frozenset({"on"})
+    assert unknown == ["Winnipeg", "Online", "*", "nowhere"]
+
+
+def test_every_branch_name_parses_to_itself():
+    from gpu_alerts.retailers.canadacomputers import BRANCHES
+
+    for province, names in BRANCHES.items():
+        assert pricing.parse_pickup(province) == (frozenset({province.lower()}), [])
+        for name in names:
+            assert pricing.parse_pickup(name) == (frozenset({pricing.pickup_key(name)}), [])
+
+
+def test_pickup_matches():
+    li = CC(9499.0, TORONTO, MISSISSAUGA, RICHMOND_BC)
+    assert Policy().pickup_matches(li) == ()
+    assert Policy(pickup=frozenset({"on"})).pickup_matches(li) == (TORONTO, MISSISSAUGA)
+    assert Policy(pickup=frozenset({"bc"})).pickup_matches(li) == (RICHMOND_BC,)
+    assert Policy(pickup=frozenset({"mississauga"})).pickup_matches(li) == (MISSISSAUGA,)
+    assert Policy(pickup=frozenset({"richmond hill"})).pickup_matches(li) == ()
+    assert Policy(pickup=frozenset({"oakville", "qc"})).pickup_matches(li) == ()
+    assert Policy(pickup=frozenset({pricing.ANY_PICKUP})).pickup_matches(li) == li.pickup_stores
+    assert Policy(pickup=frozenset({"on"})).pickup_matches(CC(9499.0)) == ()
+
+
+def test_pickup_off_is_the_default():
+    assert pricing.DEFAULT_POLICY.pickup == frozenset()
+    assert pricing.DEFAULT_POLICY == Policy()
+    assert pricing.RECORD_POLICY.pickup == frozenset({pricing.ANY_PICKUP})
+
+
+def test_offers_keeps_pickup_only_rows_only_when_the_policy_asks():
+    results = [R("canadacomputers",
+                 CC(9499.0, TORONTO, NORTH_YORK, MISSISSAUGA, title="PNY RTX 5080 Triple Fan"),
+                 CC(9300.0, title="ASUS RTX 5080 sold out everywhere"),
+                 CC(9999.0, RICHMOND_BC, title="ZOTAC RTX 5080 AIO"))]
+
+    def prices(policy):
+        return [o.price for o in pricing.offers(M5080, results, policy, matcher)]
+
+    assert prices(Policy()) == []
+    assert prices(Policy(pickup=frozenset({"on"}))) == [9499.0]
+    assert prices(Policy(pickup=frozenset({"bc"}))) == [9999.0]
+    assert prices(Policy(pickup=frozenset({"mississauga"}))) == [9499.0]
+    assert prices(Policy(pickup=frozenset({"oakville"}))) == []
+    assert prices(Policy(pickup=frozenset({"on", "bc"}))) == [9499.0, 9999.0]
+    # RECORD_POLICY stores every pickup-only row; a row no branch holds stays out.
+    assert prices(pricing.RECORD_POLICY) == [9499.0, 9999.0]
+
+
+def test_pickup_rows_still_pass_the_other_filters():
+    results = [R("canadacomputers",
+                 CC(1500.0, TORONTO, condition="open_box"),
+                 CC(800.0, TORONTO),                                   # under min_price
+                 CC(1450.0, TORONTO, title="RTX 5080 Ti"),             # wrong model
+                 CC(1550.0, TORONTO, first_party=False, seller="X"),   # marketplace
+                 CC(1600.0, TORONTO, in_stock=None),                   # unknown stock, not pickup-gated
+                 CC(1700.0, MISSISSAUGA, in_stock=True))]              # buyable online anyway
+
+    def prices(policy):
+        return [o.price for o in pricing.offers(M5080, results, policy, matcher)]
+
+    assert prices(Policy()) == [1600.0, 1700.0]
+    assert prices(Policy(pickup=frozenset({"on"}))) == [1600.0, 1700.0]
+    assert prices(Policy(include_open_box=True, pickup=frozenset({"on"}))) == [1500.0, 1600.0, 1700.0]
+    assert prices(Policy(include_marketplace=True, pickup=frozenset({"on"}))) == [1550.0, 1600.0, 1700.0]
+    assert prices(Policy(include_unknown_stock=False, pickup=frozenset({"on"}))) == [1700.0]
+
+
+def test_offers_dedup_keeps_the_cheaper_row_with_pickup():
+    results = [R("canadacomputers", CC(1600.0, TORONTO, sku="A")),
+               R("canadacomputers", CC(1550.0, MISSISSAUGA, sku="A"), CC(1500.0, RICHMOND_BC, sku="A"))]
+    (got,) = pricing.offers(M5080, results, Policy(pickup=frozenset({"on"})), matcher)
+    assert (got.price, got.pickup_stores) == (1550.0, (MISSISSAUGA,))
+    (wide,) = pricing.offers(M5080, results, pricing.RECORD_POLICY, matcher)
+    assert (wide.price, wide.pickup_stores) == (1500.0, (RICHMOND_BC,))
+
+
+def test_scan_models_passes_pickup_rows_through_unchanged():
+    row = CC(9499.0, TORONTO)
+
+    def scanner(query, retailer_ids):
+        return [ScrapeResult("canadacomputers", query, Status.OK, [row], n_raw=1)]
+
+    scan = pricing.scan_models([M5080], ["canadacomputers"], scanner=scanner)["rtx-5080"]
+    assert scan.results[0].listings == [row]
+    assert scan.offers(matcher=matcher) == []
+    assert scan.offers(Policy(pickup=frozenset({"on"})), matcher) == [row]
+    assert scan.best(Policy(pickup=frozenset({"toronto downtown"})), matcher) is row
+
+
+def test_pickup_summary():
+    assert pricing.pickup_summary([]) == ""
+    assert pricing.pickup_summary([MISSISSAUGA, TORONTO, NORTH_YORK]) == (
+        "Mississauga (1), Toronto Downtown (1), North York Centerpoint Mall (1)")
+    assert pricing.pickup_summary([PickupStore("ON", "Oakville")]) == "Oakville"
+    six = [PickupStore("ON", f"Branch {i}", "10+") for i in range(6)]
+    assert pricing.pickup_summary(six) == (
+        "Branch 0 (10+), Branch 1 (10+), Branch 2 (10+), Branch 3 (10+), +2 more")
+    assert pricing.pickup_summary(six, limit=5) == (
+        "Branch 0 (10+), Branch 1 (10+), Branch 2 (10+), Branch 3 (10+), Branch 4 (10+), +1 more")
+    assert pricing.pickup_summary(six[:4]) == "Branch 0 (10+), Branch 1 (10+), Branch 2 (10+), Branch 3 (10+)"
+    assert pricing.pickup_summary(iter(six), limit=0).count("(10+)") == 6
+
+
+def test_status_label_names_pickup_branches_only_with_a_pickup_policy():
+    offer = CC(9499.0, MISSISSAUGA, TORONTO, NORTH_YORK, RICHMOND_BC)
+    on = Policy(pickup=frozenset({"on"}))
+    result = R("canadacomputers")
+    assert pricing.status_label(result, offer) == "$9,499.00, out of stock"
+    assert pricing.status_label(result, offer, policy=Policy()) == "$9,499.00, out of stock"
+    assert pricing.status_label(result, offer, policy=on) == (
+        "$9,499.00, in-store pickup: Mississauga (1), Toronto Downtown (1), North York Centerpoint Mall (1)")
+    assert pricing.status_label(result, offer, policy=Policy(pickup=frozenset({"qc"}))) == "$9,499.00, out of stock"
+    assert pricing.status_label(result, CC(9499.0, MISSISSAUGA, in_stock=True), policy=on) == "$9,499.00, in stock"
+    open_box = CC(1500.0, MISSISSAUGA, condition="open_box")
+    assert pricing.status_label(result, open_box, policy=on) == "$1,500.00, open box, in-store pickup: Mississauga (1)"
+
+
+def test_why_none_says_pickup_only_when_a_branch_has_the_card():
+    model = catalog.by_id("rtx-5080")
+    yes = lambda title, m: type("M", (), {"ok": True})()
+    pickup = R("canadacomputers", CC(9499.0, TORONTO, MISSISSAUGA), CC(9999.0, RICHMOND_BC), CC(9300.0))
+    one = R("canadacomputers", CC(9499.0, TORONTO), CC(9599.0, TORONTO))
+    qc = Policy(pickup=frozenset({"qc"}))
+    assert pricing.why_none(model, pickup, yes, policy=qc) == "pickup only (3 branches), none on your list"
+    assert pricing.status_label(pickup, None, model, yes, policy=qc) == "pickup only (3 branches), none on your list"
+    assert pricing.why_none(model, one, yes, policy=qc) == "pickup only (1 branch), none on your list"
+    # A pickup row in the policy's branches counts as available, so the reason moves on.
+    market = R("canadacomputers", CC(9499.0, TORONTO, first_party=False, seller="X"))
+    assert pricing.why_none(model, market, yes) == "sold out (1 found)"
+    assert pricing.why_none(model, market, yes, policy=qc) == "pickup only (1 branch), none on your list"
+    assert pricing.why_none(model, market, yes, policy=Policy(pickup=frozenset({"on"}))) == (
+        "marketplace only (1 found)")
+    # Without pickup_stores (every pre-v2.2 row) the old reasons stand.
+    sold_out = R("bestbuy", L(1500.0, in_stock=False), L(1600.0, in_stock=False))
+    assert pricing.why_none(model, sold_out, yes) == "sold out (2 found)"
+    assert pricing.why_none(model, sold_out, yes, policy=Policy(pickup=frozenset({"on"}))) == "sold out (2 found)"
+
+
+def test_why_none_keeps_the_v21_label_with_pickup_off():
+    # Rule 1: with no pickup policy (/lookup, CLI without --pickup) the text and
+    # the count stay as in v2.1, even when the rows name branches.
+    model = catalog.by_id("rtx-5080")
+    yes = lambda title, m: type("M", (), {"ok": True})()
+    pickup = R("canadacomputers", CC(9499.0, TORONTO, MISSISSAUGA), CC(9999.0, RICHMOND_BC), CC(9300.0))
+    one = R("canadacomputers", CC(9499.0, MISSISSAUGA))
+    for policy in (None, Policy(), pricing.DEFAULT_POLICY):
+        assert pricing.why_none(model, pickup, yes, policy=policy) == "sold out (3 found)"
+        assert pricing.status_label(pickup, None, model, yes, policy=policy) == "sold out (3 found)"
+        assert pricing.why_none(model, one, yes, policy=policy) == "sold out (1 found)"

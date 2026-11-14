@@ -124,7 +124,7 @@ def test_intents_and_commands(client):
 def test_alert_parameters(client):
     cmd = client.tree.get_command("alert")
     params = {p.name: p for p in cmd.parameters}
-    assert list(params) == ["gpu", "target", "open_box", "marketplace"]
+    assert list(params) == ["gpu", "target", "open_box", "marketplace", "pickup"]
     assert params["gpu"].required and params["gpu"].autocomplete
     assert params["gpu"].type is discord.AppCommandOptionType.string
     t = params["target"]
@@ -1379,3 +1379,164 @@ def test_stats_line_says_check_for_one():
     three = PriceStats("rtx-5080", 30, 160_999, None, 150_000, 160_999, 170_000, 3)
     assert stats_line(one).endswith("over 1 check")
     assert stats_line(three).endswith("over 3 checks")
+
+
+# In-store pickup (v2.2)
+
+
+def _cc(price, *stores, in_stock=False, **kw):
+    """A Canada Computers listing; stores are (province, branch, quantity)."""
+    from gpu_alerts.retailers.base import PickupStore
+
+    return L(price, retailer="canadacomputers", in_stock=in_stock,
+             pickup_stores=tuple(PickupStore(*s) for s in stores), **kw)
+
+
+def _alert_cmd(client, gpu="rtx-5080", target=1500, pickup=None, user_id=1):
+    i = fake_interaction(user_id=user_id)
+    run(client.tree.get_command("alert").callback(i, gpu, target, False, False, pickup))
+    return i.response.sent[0]
+
+
+def test_alert_pickup_is_an_optional_text_option(client):
+    params = {p.name: p for p in client.tree.get_command("alert").parameters}
+    p = params["pickup"]
+    assert p.type is discord.AppCommandOptionType.string and not p.required
+    assert "Canada Computers" in p.description and len(p.description) <= 100
+
+
+def test_alert_with_pickup_is_saved_and_says_where(client):
+    content, kwargs = _alert_cmd(client, pickup="on, Oakville")
+    assert kwargs["ephemeral"] and "Alert set" in content
+    (a,) = client.store.list_alerts(1)
+    assert a.pickup == frozenset({"on", "oakville"})
+    assert "or in-store pickup in ON or at Oakville" in content
+    assert "Counting pickup at: every ON branch, Oakville" in content
+    # Blank turns it off again, like leaving open_box unset.
+    content, _ = _alert_cmd(client, pickup="  ")
+    assert "Alert updated" in content and "pickup" not in content
+    assert client.store.list_alerts(1)[0].pickup == frozenset()
+
+
+def test_alert_without_pickup_reads_as_before(client):
+    content, _ = _alert_cmd(client)
+    assert "pickup" not in content.lower() and client.store.list_alerts(1)[0].pickup == frozenset()
+
+
+def test_alert_with_an_unknown_branch_is_refused_with_suggestions(client):
+    content, kwargs = _alert_cmd(client, pickup="Misisauga, North York, Atlantis")
+    assert kwargs["ephemeral"] and "not saved" in content
+    assert "Misisauga (did you mean Mississauga?)" in content
+    assert "North York (did you mean North York Centerpoint Mall or North York Lawrence?)" in content
+    assert "Atlantis." in content and "ON" in content   # no guess for it; the province codes are listed
+    assert client.store.list_alerts(1) == []
+    # An existing alert keeps its settings when the new text is refused.
+    _alert_cmd(client, pickup="ON")
+    _alert_cmd(client, target=1200, pickup="Oakvile")
+    (a,) = client.store.list_alerts(1)
+    assert (a.target_cents, a.pickup) == (150_000, frozenset({"on"}))
+
+
+def test_unknown_pickup_words_are_shown_as_typed(client):
+    content, _ = _alert_cmd(client, pickup="@everyone, **bold**")
+    assert r"\@everyone" in content and r"\*\*bold\*\*" in content
+
+
+def test_policy_note_names_the_pickup_setting():
+    from gpu_alerts.bot import policy_note
+    from gpu_alerts.pricing import Policy
+
+    assert policy_note(Policy()) == "new, sold by the retailer"
+    assert policy_note(Policy(pickup=frozenset({"on"}))) == "new, sold by the retailer, or in-store pickup in ON"
+    assert policy_note(Policy(pickup=frozenset({"oakville", "burlington"}))).endswith(
+        ", or in-store pickup at Burlington, Oakville")
+    assert policy_note(Policy(pickup=frozenset({"north york centerpoint mall"}))).endswith(
+        "pickup at North York Centerpoint Mall")
+    assert policy_note(Policy(pickup=frozenset({"*"}))).endswith("pickup at any branch")
+
+
+def test_alert_embed_names_the_pickup_branches(client):
+    a, _ = client.store.upsert_alert(7, "rtx-5080", 150_000, channel_id=10, pickup=frozenset({"on"}))
+    best = _cc(1399.0, ("ON", "Mississauga", "1"), ("BC", "Burnaby", "2"), ("ON", "Toronto Downtown", "10+"))
+    online = L(1450.0)
+    e = alert_embed(a, M5080, best, [best, online], None, "crossed")
+    assert e.url == best.url   # still the product page
+    assert "In-store pickup only: Mississauga (1), Toronto Downtown (10+)" in e.description
+    assert "Burnaby" not in e.description   # outside the alert's province
+    assert "in-store pickup in ON" in e.footer.text
+    (nxt,) = [f for f in e.fields if f.name == "Next best"]
+    assert "pickup" not in nxt.value   # Best Buy sells it online
+
+    # A pickup-only card in the next-best list is marked as such.
+    e = alert_embed(a, M5080, online, [online, best], None, "crossed")
+    assert "pickup" not in e.description
+    (nxt,) = [f for f in e.fields if f.name == "Next best"]
+    assert "(pickup only: Mississauga (1), Toronto Downtown (10+))" in nxt.value
+
+
+def test_pickup_branch_names_are_shown_as_written(client):
+    """A branch name from the retailer's JSON is not a known one when a province token
+    matches it, so its markdown must not style the ping."""
+    from gpu_alerts.pricing import Policy
+
+    best = _cc(1399.0, ("ON", "Toronto *Pop-up* _store_", "1"))
+    expected = r"Toronto \*Pop-up\* \_store\_ (1)"
+    assert botmod.pickup_only(best, Policy(pickup=frozenset({"on"}))) == expected
+    assert botmod.pickup_only(best, Policy(pickup=frozenset({"*"}))) == expected
+    a, _ = client.store.upsert_alert(7, "rtx-5080", 150_000, channel_id=10, pickup=frozenset({"on"}))
+    e = alert_embed(a, M5080, best, [best], None, "crossed")
+    assert f"In-store pickup only: {expected}" in e.description
+    assert best.pickup_stores[0].name == "Toronto *Pop-up* _store_"   # the listing keeps the raw name
+
+
+def test_pickup_alert_fires_only_on_its_own_branches(client, monkeypatch):
+    burnaby = [ScrapeResult("canadacomputers", "q", Status.OK, [_cc(1399.0, ("BC", "Burnaby", "1"))], n_raw=1)]
+    oakville = [ScrapeResult("canadacomputers", "q", Status.OK, [_cc(1399.0, ("ON", "Oakville", "1"))], n_raw=1)]
+    client.scan_models = ScriptedScanner([burnaby, oakville])
+    client.store.upsert_alert(1, "rtx-5080", 150_000, channel_id=10, pickup=frozenset({"on"}))
+    client.store.upsert_alert(2, "rtx-5080", 150_000, channel_id=10)   # pickup off
+    sent = []
+
+    async def deliver(alert, embed):
+        sent.append((alert.user_id, embed.description))
+        return True
+
+    monkeypatch.setattr(client, "deliver", deliver)
+    run(client.run_checks())
+    assert sent == []   # in stock only in BC
+    run(client.run_checks())
+    assert [u for u, _ in sent] == [1] and "In-store pickup only: Oakville (1)" in sent[0][1]
+    assert client.store.list_alerts(2)[0].last_price_cents is None   # nothing eligible without pickup
+
+
+def test_alert_reply_names_a_recent_pickup_only_best(client):
+    recent = datetime.now(timezone.utc) - timedelta(minutes=5)
+    card = _cc(1399.0, ("ON", "Mississauga", "1"), ("QC", "Laval", "3"))
+    client.store.record_scan("rtx-5080", [card], n_ok=1, n_retailers=1, at=recent)
+    content, _ = _alert_cmd(client, pickup="ON")
+    assert "Current best: $1,399.00 at Canada Computers, in-store pickup only at Mississauga (1) (checked" in content
+    assert "Laval" not in content and "expect a ping" in content
+    content, _ = _alert_cmd(client, pickup="", user_id=2)   # without pickup the card does not count
+    assert "$1,399.00" not in content and "nothing eligible" in content
+
+
+def test_list_shows_the_pickup_setting(client):
+    client.store.upsert_alert(1, "rtx-5080", 150_000, pickup=frozenset({"oakville", "burlington"}))
+    client.store.upsert_alert(1, "rtx-5090", 250_000, include_open_box=True, pickup=frozenset({"on"}))
+    client.store.upsert_alert(1, "rx-9070", 70_000)
+    i = fake_interaction()
+    run(client.tree.get_command("list").callback(i))
+    fields = {f.name: f.value for f in i.response.sent[0][1]["embed"].fields}
+    assert fields["RTX 5080"].endswith("Includes: pickup at Burlington, Oakville")
+    assert fields["RTX 5090"].endswith("Includes: open box, pickup in ON")
+    assert "Includes" not in fields["RX 9070"]
+
+
+def test_check_marks_a_pickup_only_best(client):
+    client.scan_models = ScriptedScanner(
+        [[ScrapeResult("canadacomputers", "q", Status.OK, [_cc(1399.0, ("ON", "Oakville", "2"))], n_raw=1)]])
+    client.store.upsert_alert(1, "rtx-5080", 150_000, pickup=frozenset({"oakville"}))
+    i = fake_interaction()
+    run(client.tree.get_command("check").callback(i))
+    (field,) = i.followup.sent[0][1]["embed"].fields
+    assert "In-store pickup only: Oakville (2)" in field.value and "At or under your target" in field.value

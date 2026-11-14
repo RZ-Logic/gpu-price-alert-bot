@@ -5,11 +5,14 @@ import pytest
 
 from gpu_alerts.retailers import canadacomputers as cc
 from gpu_alerts.retailers import http
-from gpu_alerts.retailers.base import ParseError, Status
+from gpu_alerts.retailers.base import ParseError, PickupStore, Status
 
 FIXTURES = Path(__file__).parent / "fixtures"
 PRICE_ASC = (FIXTURES / "canadacomputers_search_rtx5070_priceasc.json").read_text(encoding="utf-8")
 AUDIT = (FIXTURES / "canadacomputers_search_rtx5080.json").read_text(encoding="utf-8")
+# Live 2026-11-14, trimmed: PNY pickup-only at 3 ON branches, ASUS bundle sold out
+# everywhere, ZOTAC pickup-only in BC; the ONLINE warehouse shows "10+" for the PNY.
+PICKUP = (FIXTURES / "canadacomputers_search_rtx5090_pickup.json").read_text(encoding="utf-8")
 
 
 def _page(products: list[dict], total: int, pages: int, page: int = 1) -> str:
@@ -304,6 +307,141 @@ def test_search_status_mapping(monkeypatch, status, text, extra, expected):
     monkeypatch.setattr(http, "fetch", fake)
     res = cc.search("rtx 5070")
     assert res.status is expected and res.detail and res.listings == []
+
+
+def _branch(name: str, new=0, open_box=0, pickup=None, whid: str = "XX") -> dict:
+    stock = {"new": new, "open_box": open_box}
+    if pickup is not None:
+        stock["origin_data"] = {"pickup": pickup}
+    return {"whid": whid, "whname": name, "stock": stock}
+
+
+def _pickup_row(pid: int, levels, **extra) -> dict:
+    row = dict(_row(pid, 1500.0, stock="Online - Sold Out"), stock_level=levels)
+    row["stock_availability"] = {"online_availability": "Online - Sold Out", "online": False, "retail": True}
+    row.update(extra)
+    return row
+
+
+def test_parse_pickup_fixture_names_branches():
+    rows = {r.sku: r for r in cc.parse(PICKUP, "rtx 5090")}
+    pny = rows["VCPNY00227"]
+    assert pny.price == 9499.0 and pny.in_stock is False and pny.condition == "new"
+    assert pny.category == "Powered By Nvidia, in-store pickup only"
+    # quantity descending, then name; all three are single units in Ontario
+    assert pny.pickup_stores == (
+        PickupStore("ON", "Mississauga", "1"),
+        PickupStore("ON", "North York Centerpoint Mall", "1"),
+        PickupStore("ON", "Toronto Downtown", "1"),
+    )
+    zotac = next(r for r in rows.values() if "ArcticStorm" in r.title)
+    assert zotac.in_stock is False and {s.province for s in zotac.pickup_stores} == {"BC"}
+    assert [s.name for s in zotac.pickup_stores] == ["Richmond", "Burnaby", "Coquitlam", "Surrey", "Vancouver"]
+    assert zotac.pickup_stores[0].quantity == "2"
+    # sold out online and in every store: no branches, and no pickup label
+    asus = next(r for r in rows.values() if "ROG Astral" in r.title)
+    assert asus.pickup_stores == () and asus.category == "Powered By Nvidia"
+
+
+def test_pickup_ignores_online_warehouse_and_zero_stock():
+    raw = json.loads(PICKUP)
+    pny = next(p for p in raw["products"] if p["reference"] == "VCPNY00227")
+    assert pny["stock_level"]["ONLINE"][0]["stock"]["new"] == "10+"  # the trap this rule is for
+    names = {s.name for s in cc.parse(PICKUP, "rtx 5090")[0].pickup_stores}
+    assert "Online / Main Warehouse" not in names and "North York Lawrence" not in names
+    levels = {
+        "ONLINE": [_branch("Online / Main Warehouse", new="10+", whid="HD")],
+        "online": [_branch("Online / Main Warehouse", new=5)],
+        "ON": [_branch("Oakville", new=0), _branch("Burlington", new="0", open_box=2), _branch("Ajax", new=1)],
+    }
+    (row,) = cc.parse(_page([_pickup_row(1, levels)], 1, 1), "rtx 5090")
+    assert row.pickup_stores == (PickupStore("ON", "Ajax", "1"),)
+
+
+def test_pickup_keeps_quantity_text_and_sorts_by_units():
+    levels = {
+        "QC": [_branch("Laval", new=3)],
+        "ON": [_branch("Whitby", new="10+"), _branch("Ajax", new="1"), _branch("Barrie", new=3),
+               _branch("Ajax", new=2)],  # a repeated branch keeps its larger count
+    }
+    (row,) = cc.parse(_page([_pickup_row(1, levels)], 1, 1), "rtx 5090")
+    assert row.pickup_stores == (
+        PickupStore("ON", "Whitby", "10+"),
+        PickupStore("ON", "Barrie", "3"),
+        PickupStore("QC", "Laval", "3"),
+        PickupStore("ON", "Ajax", "2"),
+    )
+
+
+def test_pickup_skips_branches_flagged_no_pickup():
+    levels = {"ON": [
+        _branch("Oakville", new=1, pickup=0), _branch("Burlington", new=1, pickup=False),
+        _branch("Hamilton", new=1, pickup="0"), _branch("Kanata", new=1, pickup=1),
+        _branch("Nepean", new=1),  # no flag at all still counts
+    ]}
+    (row,) = cc.parse(_page([_pickup_row(1, levels)], 1, 1), "rtx 5090")
+    assert [s.name for s in row.pickup_stores] == ["Kanata", "Nepean"]
+
+
+def test_pickup_only_for_new_units_the_site_offers():
+    levels = {"ON": [_branch("Oakville", new=2)]}
+    open_box = _pickup_row(1, levels, name="Card 1 (Open Box)")
+    sold_out = _pickup_row(2, levels)
+    sold_out["stock_availability"] = {"online_availability": "Online - Sold Out", "retail": False}
+    online = dict(_row(3, 1600.0), stock_level=levels)
+    online["stock_availability"] = {"online_availability": "Online - Available to Ship", "retail": True}
+    rows = {r.sku: r for r in cc.parse(_page([open_box, sold_out, online], 3, 1), "rtx 5090")}
+    assert rows["VC1"].condition == "open_box" and rows["VC1"].pickup_stores == ()
+    assert rows["VC2"].pickup_stores == ()  # the site itself says "In Store - Sold Out"
+    # buyable online stays in_stock=True; the branches ride along
+    assert rows["VC3"].in_stock is True and rows["VC3"].pickup_stores == (PickupStore("ON", "Oakville", "2"),)
+
+
+@pytest.mark.parametrize("levels", [
+    None, "ON: Oakville", [], 7, {"ON": "Oakville"}, {"ON": None}, {3: [_branch("Oakville", new=1)]}, {"O N": [_branch("Oakville", new=1)]},
+    {"": [_branch("Oakville", new=1)]},
+    {"ON": [None, 5, "Oakville", {"whname": None, "stock": {"new": 1}}, {"whname": "Oakville"},
+            {"whname": "Oakville", "stock": "3"}, {"whname": "", "stock": {"new": 1}},
+            {"whname": ["Oakville"], "stock": {"new": 1}}, _branch("Oakville", new="lots"),
+            _branch("Oakville", new=True), _branch("Oakville", new=-2), _branch("Oakville", new=1.5),
+            _branch("Oakville", new=None), _branch("Oakville", new=[1]),
+            _branch("Oakville", new=float("inf")), _branch("Oakville", new=float("nan"))]},
+], ids=["none", "str", "list", "int", "branches-str", "branches-none", "int-key", "spaced-key", "blank-key", "odd-entries"])
+def test_pickup_tolerates_malformed_stock_level(levels):
+    # A pickup hint must never cost the row or raise a ParseError.
+    rows = cc.parse(_page([_pickup_row(1, levels), _row(2, 1600.0)], 2, 1), "rtx 5090")
+    assert [r.sku for r in rows] == ["VC1", "VC2"]
+    assert rows[0].pickup_stores == () and rows[0].in_stock is False
+    # an unreadable origin_data is not an explicit "no pickup"
+    odd = {"ON": [{"whname": "Oakville", "stock": {"new": 1, "origin_data": "x"}}]}
+    assert cc.pickup_stores({"stock_level": odd}) == (PickupStore("ON", "Oakville", "1"),)
+
+
+def test_branches_lists_every_fixture_branch():
+    raw = json.loads(PICKUP)
+    seen: dict[str, set[str]] = {}
+    for p in raw["products"]:
+        for prov, entries in p["stock_level"].items():
+            if prov != "ONLINE":
+                seen.setdefault(prov, set()).update(e["whname"] for e in entries)
+    assert seen and all(names <= set(cc.BRANCHES[prov]) for prov, names in seen.items())
+    assert sum(len(v) for v in seen.values()) == sum(len(v) for v in cc.BRANCHES.values()) == 42
+    stores = [s for r in cc.parse(PICKUP, "rtx 5090") for s in r.pickup_stores]
+    assert stores and all(s.name in cc.BRANCHES[s.province] for s in stores)
+
+
+def test_search_notes_count_pickup_rows_with_branches(monkeypatch):
+    data = json.loads(PICKUP)
+    data["pagination"]["pages_count"] = 1
+    fake, _ = _fake_fetch([(200, json.dumps(data), {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    res = cc.search("rtx 5090")
+    assert res.status is Status.OK and len(res.listings) == 3
+    assert "2 in-store pickup only, 2 naming branches" in res.detail
+    # a capture without stock_level keeps the old wording as the prefix
+    fake, _ = _fake_fetch([(200, PRICE_ASC, {})])
+    monkeypatch.setattr(http, "fetch", fake)
+    assert "in-store pickup only, 0 naming branches" in cc.search("rtx 5070").detail
 
 
 @pytest.mark.live

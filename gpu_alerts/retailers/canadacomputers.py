@@ -21,7 +21,7 @@ import re
 import time
 
 from . import http
-from .base import Listing, ParseError, ScrapeResult, Status
+from .base import Listing, ParseError, PickupStore, ScrapeResult, Status
 
 RETAILER_ID = "canadacomputers"
 DISPLAY_NAME = "Canada Computers"
@@ -33,6 +33,23 @@ GRAPHICS_CARDS_CATEGORY_ID = "914"
 GPU_CATEGORY_IDS = {916, 917, 918}
 GPU_CATEGORY_NAMES = {"powered by amd", "powered by nvidia", "powered by intel"}
 CONDITION_MAP = {"new": "new", "refurbished": "refurbished", "used": "used"}
+
+# Store branches by province, as the search JSON's stock_level block names them
+# (read live 2026-11-14; "ONLINE" / "Online / Main Warehouse" is not a pickup
+# branch). Used to check the branch names a user types into /alert pickup:.
+BRANCHES: dict[str, tuple[str, ...]] = {
+    "AB": ("Calgary", "Edmonton Northgate", "Edmonton South Park"),
+    "BC": ("Burnaby", "Coquitlam", "Richmond", "Surrey", "Vancouver"),
+    "NS": ("Halifax",),
+    "ON": (
+        "Ajax", "Barrie", "Brampton", "Burlington", "Cambridge", "Etobicoke", "Hamilton",
+        "Kanata", "Kingston", "London", "Markham", "Mississauga", "Nepean", "Newmarket",
+        "North York Centerpoint Mall", "North York Lawrence", "Oakville", "Orleans", "Oshawa",
+        "Ottawa", "Richmond Hill", "Scarborough", "St Catharines", "Toronto Downtown",
+        "Vaughan", "Waterloo", "Whitby",
+    ),
+    "QC": ("Brossard", "Gatineau", "Laval", "Marche Central", "Montreal", "Quebec City"),
+}
 
 
 def _load(payload: str | dict) -> dict:
@@ -86,6 +103,82 @@ def in_store_only(p: dict) -> bool:
     return not stock_text(p).startswith("Online - Available") and bool(sa.get("retail"))
 
 
+ONLINE_WAREHOUSE_KEY = "ONLINE"
+_UNITS = re.compile(r"(\d+)\+?")
+_OFF_FLAGS = {"0", "false", "n", "no"}
+
+
+def _units(value) -> tuple[int, str] | None:
+    """(count for sorting, text as shown) for a branch's new units; None for zero or unreadable.
+
+    The site shows small counts as numbers and large ones as text like "10+",
+    so the text is kept as shown and only the leading number is used to sort.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        try:
+            count = int(value)
+        except (OverflowError, ValueError):  # JSON Infinity or NaN
+            return None
+        return (count, str(count)) if count > 0 and count == value else None
+    if isinstance(value, str):
+        text = value.strip()
+        match = _UNITS.fullmatch(text)
+        if match and int(match.group(1)) > 0:
+            return int(match.group(1)), text
+    return None
+
+
+def _pickup_off(stock: dict) -> bool:
+    """origin_data.pickup says this branch does not do pickup (explicit 0 or false only)."""
+    origin = stock.get("origin_data")
+    if not isinstance(origin, dict) or "pickup" not in origin:
+        return False
+    flag = origin["pickup"]
+    if flag is False or (isinstance(flag, (int, float)) and not isinstance(flag, bool) and flag == 0):
+        return True
+    return isinstance(flag, str) and flag.strip().lower() in _OFF_FLAGS
+
+
+def pickup_stores(p: dict) -> tuple[PickupStore, ...]:
+    """Branches with new units for pickup, from the row's stock_level block.
+
+    stock_level maps a province code to branch entries. The ONLINE key is the
+    main warehouse, not a branch (it can show "10+" while online is sold out),
+    and open-box units are a different item, so both are left out. Any odd shape
+    yields fewer branches, never an error: a pickup hint must not cost the row.
+    """
+    levels = p.get("stock_level")
+    if not isinstance(levels, dict):
+        return ()
+    found: dict[tuple[str, str], tuple[int, PickupStore]] = {}
+    for prov, entries in levels.items():
+        if not isinstance(prov, str) or not isinstance(entries, list):
+            continue
+        province = prov.strip().upper()
+        if not province.isalpha() or province == ONLINE_WAREHOUSE_KEY:
+            continue
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            name = entry.get("whname")
+            stock = entry.get("stock")
+            if not isinstance(name, str) or not isinstance(stock, dict):
+                continue
+            name = " ".join(name.split())
+            if not name or name.lower().startswith("online"):
+                continue
+            units = _units(stock.get("new"))
+            if units is None or _pickup_off(stock):
+                continue
+            key = (province, name.lower())
+            if key not in found or units[0] > found[key][0]:
+                found[key] = (units[0], PickupStore(province=province, name=name, quantity=units[1]))
+    ranked = sorted(found.values(), key=lambda item: (-item[0], item[1].name.lower(), item[1].province))
+    return tuple(store for _, store in ranked)
+
+
 def _unreadable_price(p: dict) -> bool:
     """price_amount is missing or not a number. Null and 0 are real unpriced rows (coming soon)."""
     if "price_amount" not in p:
@@ -121,6 +214,12 @@ def parse(payload: str | dict, query: str) -> list[Listing]:
         category = p.get("category_name") or None
         if in_store_only(p):
             category = f"{category or 'Graphics card'}, in-store pickup only"
+        condition = _condition(p, title)
+        # Only new units count for pickup, and the site's own "In Store - Sold
+        # Out" (retail false) wins over a stray branch count.
+        sa = p.get("stock_availability")
+        retail_off = isinstance(sa, dict) and sa.get("retail") is False
+        stores = pickup_stores(p) if condition == "new" and not retail_off else ()
         out.append(Listing(
             retailer=RETAILER_ID,
             title=title,
@@ -130,9 +229,10 @@ def parse(payload: str | dict, query: str) -> list[Listing]:
             in_stock=stock.startswith("Online - Available") if stock else None,
             first_party=True,
             seller=None,
-            condition=_condition(p, title),
+            condition=condition,
             regular_price=regular if regular and regular > price else None,
             category=category,
+            pickup_stores=stores,
         ))
     if malformed and not out:
         raise ParseError(f"none of {malformed} graphics card rows had a name, price and url")
@@ -224,9 +324,10 @@ def search(query: str) -> ScrapeResult:
             model = _model_number(query)
             if pages_read == MAX_PAGES and listings and model and not _has_model_rows(listings, model[1]):
                 notes.append(f"page cap hit with no {model[0]} rows; results may be incomplete")
-        pickup = sum(1 for row in listings if row.category and "in-store pickup only" in row.category)
-        if pickup:
-            notes.append(f"{pickup} in-store pickup only")
+        pickup_rows = [row for row in listings if row.category and "in-store pickup only" in row.category]
+        if pickup_rows:
+            named = sum(1 for row in pickup_rows if row.pickup_stores)
+            notes.append(f"{len(pickup_rows)} in-store pickup only, {named} naming branches")
         result.listings = listings
         if listings:
             result.status = Status.OK

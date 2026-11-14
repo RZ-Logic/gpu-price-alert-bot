@@ -38,6 +38,15 @@ class ParseError(Exception):
 
 
 @dataclass(frozen=True)
+class PickupStore:
+    """A branch that has the listing in stock (new units) for in-store pickup."""
+
+    province: str                       # two-letter code, e.g. "ON"
+    name: str                           # branch name as the retailer shows it, e.g. "Mississauga"
+    quantity: str = ""                  # units as the retailer shows them, e.g. "1" or "10+"
+
+
+@dataclass(frozen=True)
 class Listing:
     retailer: str                       # RETAILER_ID
     title: str
@@ -50,6 +59,10 @@ class Listing:
     condition: str = "new"              # one of CONDITIONS
     regular_price: float | None = None  # pre-sale or pre-rebate price when shown
     category: str | None = None         # retailer category text, if the source gives one
+    # Branches with new stock for pickup, when the source names them (Canada
+    # Computers only). in_stock stays about buying online, so a pickup-only card
+    # is in_stock=False with this filled in; see pricing.Policy.pickup.
+    pickup_stores: tuple[PickupStore, ...] = ()
 
 
 @dataclass

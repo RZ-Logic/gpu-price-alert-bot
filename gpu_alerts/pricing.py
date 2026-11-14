@@ -7,13 +7,14 @@ module costs one retailer (or one lookup), never the whole bot.
 import logging
 import math
 import time
+import unicodedata
 from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from .catalog import GPUModel
-from .retailers.base import Listing, ScrapeResult, Status
+from .retailers.base import Listing, PickupStore, ScrapeResult, Status
 
 log = logging.getLogger(__name__)
 
@@ -28,6 +29,54 @@ SKIPPED_PREFIX = "skipped:"
 SKIPPED_DETAIL = f"{SKIPPED_PREFIX} blocked earlier in this run"
 
 
+# Pickup token that matches every branch. Only RECORD_POLICY uses it, so the
+# history keeps pickup-only offers for the alerts that ask for them.
+ANY_PICKUP = "*"
+
+
+# Full province names a user may type instead of the code ("Ontario" -> "on").
+_PROVINCE_NAMES = {
+    "alberta": "ab", "british columbia": "bc", "nova scotia": "ns", "ontario": "on", "quebec": "qc",
+}
+
+
+def pickup_key(text: str) -> str:
+    """Normalised branch or province text: lowercase, single spaces, no dots, no accents.
+
+    Accents are dropped so "Montréal" or "Québec City" matches the branch names
+    the search JSON uses ("Montreal", "Quebec City").
+    """
+    folded = "".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c))
+    return " ".join(folded.replace(".", " ").lower().split())
+
+
+def parse_pickup(text: str | None) -> tuple[frozenset[str], list[str]]:
+    """(tokens, unknown words) from a user's pickup text, e.g. "ON" or "Oakville, Burlington".
+
+    A token is a province code with Canada Computers branches ("on"; "Ontario"
+    also gives "on") or a branch name ("oakville"), normalised by pickup_key.
+    Empty or blank text means pickup is off: (frozenset(), []). Words that are
+    neither come back in unknown, as typed, so the caller can refuse them; the
+    tokens never include them.
+    """
+    from .retailers.canadacomputers import BRANCHES
+
+    provinces = {p.lower() for p in BRANCHES}
+    branches = {pickup_key(name) for names in BRANCHES.values() for name in names}
+    tokens: set[str] = set()
+    unknown: list[str] = []
+    for part in (text or "").split(","):
+        if not part.strip():
+            continue
+        key = pickup_key(part)
+        key = _PROVINCE_NAMES.get(key, key)
+        if key in provinces or key in branches:
+            tokens.add(key)
+        else:
+            unknown.append(part.strip())
+    return frozenset(tokens), unknown
+
+
 @dataclass(frozen=True)
 class Policy:
     """Which listings count as a buyable offer."""
@@ -35,17 +84,50 @@ class Policy:
     include_open_box: bool = False
     include_marketplace: bool = False
     include_unknown_stock: bool = True
+    # Tokens from parse_pickup. Empty: only stock you can buy online counts (as
+    # before v2.2). Otherwise a listing that is not in stock online also counts
+    # when one of its pickup_stores is in a named province or is a named branch.
+    pickup: frozenset[str] = frozenset()
 
     def conditions(self) -> frozenset[str]:
         if self.include_open_box:
             return frozenset({"new", "open_box", "refurbished"})
         return frozenset({"new"})
 
+    def pickup_matches(self, listing: Listing) -> tuple[PickupStore, ...]:
+        """The listing's pickup branches this policy asks for, in the listing's order."""
+        if not self.pickup:
+            return ()
+        if ANY_PICKUP in self.pickup:
+            return listing.pickup_stores
+        return tuple(
+            s for s in listing.pickup_stores
+            if pickup_key(s.province) in self.pickup or pickup_key(s.name) in self.pickup
+        )
+
+
+def pickup_summary(stores: Iterable[PickupStore], limit: int = 4) -> str:
+    """Branches with their units for a ping or status line, e.g. "Mississauga (1), Oakville (10+)".
+
+    Past limit the rest are counted ("+2 more") so a card in 20 stores still fits
+    one line. A limit of 0 or less lists every branch.
+    """
+    items = list(stores)
+    parts = [f"{s.name} ({s.quantity})" if s.quantity else s.name for s in items]
+    if 0 < limit < len(parts):
+        parts = parts[:limit] + [f"+{len(items) - limit} more"]
+    return ", ".join(parts)
+
 
 DEFAULT_POLICY = Policy()
 # What gets stored per scan: every matched, possibly buyable listing. Narrower
 # policies are applied again when reading history.
-RECORD_POLICY = Policy(include_open_box=True, include_marketplace=True, include_unknown_stock=True)
+# Pickup-only offers are stored too (in_stock 0 with their branches); store.py
+# leaves them out of history reads unless the read asks for pickup.
+RECORD_POLICY = Policy(
+    include_open_box=True, include_marketplace=True, include_unknown_stock=True,
+    pickup=frozenset({ANY_PICKUP}),
+)
 
 
 @dataclass
@@ -148,7 +230,7 @@ def offers(
                 continue
             if listing.first_party is False and not policy.include_marketplace:
                 continue
-            if listing.in_stock is False:
+            if listing.in_stock is False and not policy.pickup_matches(listing):
                 continue
             if listing.in_stock is None and not policy.include_unknown_stock:
                 continue
@@ -183,8 +265,20 @@ def best_per_retailer(found: Iterable[Listing]) -> dict[str, Listing]:
     return out
 
 
-def why_none(model: GPUModel, result: ScrapeResult, matcher: Matcher | None = None) -> str:
-    """Why a retailer that answered has no eligible offer for the model."""
+def why_none(
+    model: GPUModel,
+    result: ScrapeResult,
+    matcher: Matcher | None = None,
+    *,
+    policy: Policy | None = None,
+) -> str:
+    """Why a retailer that answered has no eligible offer for the model.
+
+    With pickup off (no policy or an empty pickup) the reasons are the v2.1 ones,
+    so /lookup and the CLI read as before. With a pickup policy, a card in one
+    of its branches counts as available, and cards sold out online that other
+    branches still have say "pickup only (N branches), none on your list".
+    """
     match = matcher or _default_matcher()
     found = []
     for li in result.listings:
@@ -196,9 +290,15 @@ def why_none(model: GPUModel, result: ScrapeResult, matcher: Matcher | None = No
     if not found:
         return "no match"
     n = len(found)
-    available = [li for li in found if li.in_stock is not False]
+    available = [
+        li for li in found
+        if li.in_stock is not False or (policy is not None and policy.pickup_matches(li))
+    ]
     if not available:
-        return f"sold out ({n} found)"
+        branches = {(s.province, s.name) for li in found for s in li.pickup_stores}
+        if not branches or policy is None or not policy.pickup:
+            return f"sold out ({n} found)"
+        return f"pickup only ({len(branches)} branch{'' if len(branches) == 1 else 'es'}), none on your list"
     if all(li.first_party is False for li in available):
         return f"marketplace only ({n} found)"
     if all(li.condition != "new" for li in available):
@@ -211,21 +311,28 @@ def status_label(
     offer: Listing | None,
     model: GPUModel | None = None,
     matcher: Matcher | None = None,
+    *,
+    policy: Policy | None = None,
 ) -> str:
     """One word or phrase for a retailer's outcome: a price line, or why there is none.
 
     With the model, a retailer that answered but has nothing eligible says why
     (sold out, marketplace only, open box only) instead of just "no match".
+    With a pickup policy, an offer sold out online names the branches it picked
+    instead of saying "out of stock".
     """
     status = Status(result.status)
     if offer is not None:
-        stock = {True: "in stock", False: "out of stock", None: "stock unknown"}[offer.in_stock]
         extra = "" if offer.condition == "new" else f", {offer.condition.replace('_', ' ')}"
         if offer.first_party is False:
             extra += f", sold by {offer.seller or 'a marketplace seller'}"
+        stores = policy.pickup_matches(offer) if policy is not None and offer.in_stock is False else ()
+        if stores:
+            return f"${offer.price:,.2f}{extra}, in-store pickup: {pickup_summary(stores)}"
+        stock = {True: "in stock", False: "out of stock", None: "stock unknown"}[offer.in_stock]
         return f"${offer.price:,.2f}, {stock}{extra}"
     if status in (Status.OK, Status.EMPTY):
-        return why_none(model, result, matcher) if model is not None else "no match"
+        return why_none(model, result, matcher, policy=policy) if model is not None else "no match"
     if status is Status.BLOCKED:
         return "blocked"
     if status is Status.DISABLED:

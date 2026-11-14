@@ -5,7 +5,7 @@ from datetime import timedelta
 
 import pytest
 
-from gpu_alerts.retailers.base import Listing, ScrapeResult, Status
+from gpu_alerts.retailers.base import Listing, PickupStore, ScrapeResult, Status
 from gpu_alerts.store import AlertLimitError, Store, iso, to_cents, utcnow
 
 
@@ -494,3 +494,191 @@ def test_v2_0_database_is_migrated_in_place(tmp_path):
         assert reset.holding_retailers == frozenset() and reset.held_streak == 0
     with Store(path) as s:   # opening again changes nothing
         assert [a.holding_retailers for a in s.all_alerts()] == [frozenset(), frozenset()]
+
+
+# v2.2: Canada Computers in-store pickup.
+
+MISS = PickupStore("ON", "Mississauga", "1")
+TOR = PickupStore("ON", "Toronto Downtown", "10+")
+NYC = PickupStore("ON", "North York Centerpoint Mall", "1")
+BURNABY = PickupStore("BC", "Burnaby", "2")
+
+# The alerts, scans and snapshots tables as v2.1.0 created them.
+V2_1_SCHEMA = """
+CREATE TABLE alerts (
+    id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, channel_id INTEGER, guild_id INTEGER,
+    model_id TEXT NOT NULL, target_cents INTEGER NOT NULL CHECK (target_cents > 0),
+    include_open_box INTEGER NOT NULL DEFAULT 0, include_marketplace INTEGER NOT NULL DEFAULT 0,
+    armed INTEGER NOT NULL DEFAULT 1, notified_price_cents INTEGER, notified_at TEXT,
+    above_streak INTEGER NOT NULL DEFAULT 0, notified_retailer TEXT, rev INTEGER NOT NULL DEFAULT 0,
+    holding_retailers TEXT, held_streak INTEGER NOT NULL DEFAULT 0, observed_at TEXT,
+    last_price_cents INTEGER, last_checked_at TEXT, created_at TEXT NOT NULL,
+    UNIQUE (user_id, model_id)
+);
+CREATE TABLE scans (
+    id INTEGER PRIMARY KEY, scanned_at TEXT NOT NULL, model_id TEXT NOT NULL,
+    n_ok INTEGER NOT NULL, n_retailers INTEGER NOT NULL
+);
+CREATE TABLE snapshots (
+    id INTEGER PRIMARY KEY, scan_id INTEGER NOT NULL REFERENCES scans (id) ON DELETE CASCADE,
+    scanned_at TEXT NOT NULL, model_id TEXT NOT NULL, retailer TEXT NOT NULL, sku TEXT,
+    title TEXT NOT NULL, price_cents INTEGER NOT NULL, in_stock INTEGER, first_party INTEGER,
+    condition TEXT NOT NULL, url TEXT NOT NULL
+);
+"""
+
+
+def _cc(price, stores=(), in_stock=False, **kw):
+    return L(price, retailer="canadacomputers", in_stock=in_stock, pickup_stores=tuple(stores), **kw)
+
+
+def test_v2_1_database_gets_the_pickup_columns(tmp_path):
+    import sqlite3
+
+    path = tmp_path / "v2.1.sqlite3"
+    stamp = iso(utcnow() - timedelta(hours=2))
+    conn = sqlite3.connect(path)
+    conn.executescript(V2_1_SCHEMA)
+    conn.execute("INSERT INTO alerts (user_id, model_id, target_cents, holding_retailers, created_at)"
+                 " VALUES (1, 'rtx-5090', 950000, 'bestbuy', '2026-11-01T00:00:00.000000+00:00')")
+    conn.execute("INSERT INTO scans (id, scanned_at, model_id, n_ok, n_retailers) VALUES (1, ?, 'rtx-5090', 1, 6)",
+                 (stamp,))
+    conn.execute("INSERT INTO snapshots (scan_id, scanned_at, model_id, retailer, title, price_cents, in_stock,"
+                 " condition, url) VALUES (1, ?, 'rtx-5090', 'bestbuy', 'RTX 5090', 999900, 1, 'new', 'u')",
+                 (stamp,))
+    conn.commit()
+    conn.close()
+    with Store(path) as s:
+        assert "pickup" in {r[1] for r in s._query("PRAGMA table_info(alerts)")}
+        assert {"pickup_stores", "pickup_keys"} <= {r[1] for r in s._query("PRAGMA table_info(snapshots)")}
+        (a,) = s.all_alerts()
+        assert a.pickup == frozenset() and a.holding_retailers == {"bestbuy"}
+        _, (offer,) = s.latest_offers("rtx-5090")
+        assert offer.price_cents == 999_900 and offer.pickup_stores == ()
+        assert s.latest_offers("rtx-5090", pickup=frozenset({"on"}))[1] == [offer]
+        assert [p for _, p in s.best_history("rtx-5090")] == [999_900]
+        # New scans can be written into the migrated table.
+        s.record_scan("rtx-5090", [_cc(9499, [MISS])], n_ok=1, n_retailers=6)
+        assert s.latest_offers("rtx-5090", pickup=frozenset({"on"}))[1][0].pickup_stores == (MISS,)
+    with Store(path) as s:   # opening again changes nothing
+        assert s.all_alerts()[0].pickup == frozenset()
+        assert len(s._query("SELECT * FROM snapshots")) == 2
+
+
+def test_pickup_branches_round_trip(store):
+    stores = (MISS, TOR, NYC, PickupStore("QC", "Montréal", "3"))
+    store.record_scan("rtx-5090", [_cc(9499, stores), L(9999, in_stock=True)], n_ok=2, n_retailers=6)
+    _, offers = store.latest_offers("rtx-5090", pickup=frozenset({"*"}))
+    assert [o.price_cents for o in offers] == [949_900, 999_900]
+    assert offers[0].pickup_stores == stores and offers[0].in_stock is False
+    assert offers[1].pickup_stores == ()
+    # A read naming tokens keeps only the branches they ask for.
+    _, offers = store.latest_offers("rtx-5090", pickup=frozenset({"mississauga", "toronto downtown"}))
+    assert offers[0].pickup_stores == (MISS, TOR)
+
+
+def test_pickup_only_rows_stay_out_of_default_history(store):
+    now = utcnow()
+    _scan(store, "rtx-5090", [10500], now - timedelta(days=3))
+    store.record_scan("rtx-5090", [L(10000, in_stock=True), _cc(9499, [MISS, TOR])],
+                      n_ok=2, n_retailers=6, at=now - timedelta(hours=1))
+
+    # Without pickup the cheaper pickup-only card changes nothing.
+    assert [p for _, p in store.best_history("rtx-5090")] == [1_050_000, 1_000_000]
+    plain = store.price_stats("rtx-5090", 30)
+    assert (plain.latest_cents, plain.low_cents) == (1_000_000, 1_000_000)
+    _, offers = store.latest_offers("rtx-5090")
+    assert [o.price_cents for o in offers] == [1_000_000]
+
+    # It counts for the province, a named branch, any branch, and a mix of tokens.
+    for tokens in ({"on"}, {"mississauga"}, {"toronto downtown"}, {"*"}, {"bc", "mississauga"}):
+        pickup = frozenset(tokens)
+        assert [p for _, p in store.best_history("rtx-5090", pickup=pickup)] == [1_050_000, 949_900], tokens
+        stats = store.price_stats("rtx-5090", 30, pickup=pickup)
+        assert (stats.latest_cents, stats.low_cents) == (949_900, 949_900), tokens
+        assert [o.price_cents for o in store.latest_offers("rtx-5090", pickup=pickup)[1]] == [949_900, 1_000_000]
+
+    # Not for another province, a branch that has none, or part of a branch name.
+    for tokens in ({"bc"}, {"oakville"}, {"richmond"}, {"toronto"}):
+        pickup = frozenset(tokens)
+        assert [p for _, p in store.best_history("rtx-5090", pickup=pickup)] == [1_050_000, 1_000_000], tokens
+        assert store.price_stats("rtx-5090", 30, pickup=pickup).low_cents == 1_000_000, tokens
+
+
+def test_pickup_tokens_are_bound_not_formatted(store):
+    store.record_scan("rtx-5090", [_cc(9499, [MISS])], n_ok=1, n_retailers=6)
+    hostile = frozenset({"') OR 1=1 --", "x' OR '1'='1"})
+    assert [p for _, p in store.best_history("rtx-5090", pickup=hostile)] == [None]
+    assert store.latest_offers("rtx-5090", pickup=hostile)[1] == []
+    assert len(store._query("SELECT * FROM snapshots")) == 1
+
+
+def test_sold_out_rows_without_branches_never_count(store):
+    # An in_stock 0 row with no branches is not a pickup offer, not even for "*".
+    store.record_scan("rtx-5090", [L(9000, in_stock=False), _cc(9600, [BURNABY])], n_ok=1, n_retailers=6)
+    assert [p for _, p in store.best_history("rtx-5090", pickup=frozenset({"*"}))] == [960_000]
+    assert [p for _, p in store.best_history("rtx-5090", pickup=frozenset({"bc"}))] == [960_000]
+    assert [p for _, p in store.best_history("rtx-5090")] == [None]
+
+
+def test_pickup_reads_still_apply_condition_and_marketplace(store):
+    store.record_scan("rtx-5090", [_cc(9000, [MISS], condition="open_box"),
+                                   _cc(9100, [MISS], first_party=False),
+                                   _cc(9600, [MISS])], n_ok=1, n_retailers=6)
+    on = frozenset({"on"})
+    assert [p for _, p in store.best_history("rtx-5090", pickup=on)] == [960_000]
+    assert [p for _, p in store.best_history("rtx-5090", pickup=on, include_marketplace=True)] == [910_000]
+    assert [p for _, p in store.best_history("rtx-5090", pickup=on, include_open_box=True,
+                                            include_marketplace=True)] == [900_000]
+
+
+def test_upsert_stores_pickup_and_changing_it_rearms(store):
+    a, created = store.upsert_alert(1, "rtx-5090", 950_000, pickup=frozenset({"on", "burnaby"}))
+    assert created and a.pickup == {"on", "burnaby"}
+    assert store._query("SELECT pickup FROM alerts")[0][0] == "burnaby,on"
+    assert store.update_alert_state(a.id, armed=False, notified_price_cents=949_900, notified_at=utcnow(),
+                                    last_price_cents=949_900, notified_retailer="canadacomputers",
+                                    holding_retailers={"canadacomputers"}, held_streak=2)
+    held = store.get_alert(a.id)
+    assert not held.armed and held.pickup == {"on", "burnaby"}   # a state write keeps pickup
+
+    b, created = store.upsert_alert(1, "rtx-5090", 950_000, pickup=frozenset({"mississauga"}))
+    assert not created and b.id == a.id and b.rev == a.rev + 1
+    assert b.armed and b.notified_price_cents is None and b.holding_retailers == frozenset()
+    assert b.held_streak == 0 and b.pickup == {"mississauga"}
+
+    c, _ = store.upsert_alert(1, "rtx-5090", 950_000)   # pickup off again
+    assert c.pickup == frozenset() and store._query("SELECT pickup FROM alerts")[0][0] is None
+    with pytest.raises(ValueError):
+        store.upsert_alert(1, "rtx-5090", 950_000, pickup=frozenset({"on,bc"}))
+
+
+def test_raw_pickup_tokens_read_like_normalised_ones(store):
+    # The SQL filter and the branch filter agree on tokens that are not normalised.
+    store.record_scan("rtx-5090", [_cc(9100, [MISS, BURNABY])], n_ok=1, n_retailers=6)
+    for raw, branches in (({"ON"}, (MISS,)), ({" Mississauga "}, (MISS,)), ({"B.C."}, ()),
+                          ({"BC", "*"}, (MISS, BURNABY))):
+        _, offers = store.latest_offers("rtx-5090", pickup=frozenset(raw))
+        if branches:
+            assert [(o.price_cents, o.pickup_stores) for o in offers] == [(910_000, branches)], raw
+        else:
+            assert offers == [], raw   # "B.C." folds to "b c", which is no province
+    _, (offer,) = store.latest_offers("rtx-5090", pickup=frozenset({"BC"}))
+    assert offer.pickup_stores == (BURNABY,)
+
+
+def test_upsert_normalises_pickup_tokens(store):
+    a, _ = store.upsert_alert(1, "rtx-5090", 950_000, pickup=frozenset({"ON", " Toronto  Downtown ", "*", ""}))
+    assert a.pickup == {"on", "toronto downtown", "*"}
+    assert store._query("SELECT pickup FROM alerts")[0][0] == "*,on,toronto downtown"
+    b, _ = store.upsert_alert(1, "rtx-5090", 950_000, pickup=frozenset({" ", "."}))
+    assert b.pickup == frozenset()   # tokens that normalise to nothing turn pickup off
+
+
+def test_list_alerts_returns_pickup(store):
+    store.upsert_alert(1, "rtx-5090", 950_000, pickup=frozenset({"*"}))
+    store.upsert_alert(1, "rtx-5080", 150_000)
+    assert [(a.model_id, a.pickup) for a in store.list_alerts(1)] == [
+        ("rtx-5090", frozenset({"*"})), ("rtx-5080", frozenset()),
+    ]
+    assert {a.model_id: a.pickup for a in store.all_alerts()}["rtx-5090"] == {"*"}
