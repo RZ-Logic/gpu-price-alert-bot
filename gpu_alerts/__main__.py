@@ -1,7 +1,7 @@
 """Command line: run the bot, or look up prices and scraper health without Discord.
 
     python -m gpu_alerts [run]
-    python -m gpu_alerts lookup "rtx 5070 ti" [--open-box] [--marketplace] [--top N]
+    python -m gpu_alerts lookup "rtx 5070 ti" [--open-box] [--marketplace] [--pickup ON] [--top N]
     python -m gpu_alerts health [--query "rtx 5080"]
     python -m gpu_alerts import-v1 gpu_alerts.json [--force]
 """
@@ -46,14 +46,20 @@ def cmd_lookup(args: argparse.Namespace) -> int:
         if hits:
             print("Did you mean: " + ", ".join(f"{m.name} ({m.id})" for m in hits), file=sys.stderr)
         return 2
-    policy = pricing.Policy(include_open_box=args.open_box, include_marketplace=args.marketplace)
+    tokens, unknown = pricing.parse_pickup(args.pickup)
+    if unknown:
+        from .bot import unknown_pickup   # only on this path: it loads discord.py
+
+        print(unknown_pickup(unknown), file=sys.stderr)
+        return 2
+    policy = pricing.Policy(include_open_box=args.open_box, include_marketplace=args.marketplace, pickup=tokens)
     print(f"Searching {model.query!r} for {model.name} (min ${model.min_price:,.0f})...")
     results = pricing.scan(model.query)
     found = pricing.offers(model, results, policy)
     per = pricing.best_per_retailer(found)
     rows = [
         [_name(r.retailer), Status(r.status).value, r.http_status or "", r.n_raw, len(r.listings),
-         pricing.status_label(r, per.get(r.retailer), model), r.detail[:60]]
+         pricing.status_label(r, per.get(r.retailer), model, policy=policy), r.detail[:60]]
         for r in results
     ]
     print(_table(rows, ["retailer", "status", "http", "raw", "listings", "best eligible", "detail"]))
@@ -72,6 +78,11 @@ def cmd_lookup(args: argparse.Namespace) -> int:
             flags.append(f"seller: {li.seller or 'marketplace'}")
         if li.in_stock is None:
             flags.append("stock unknown")
+        stores = policy.pickup_matches(li)
+        if li.in_stock is False:
+            flags.append(f"in-store pickup only: {pricing.pickup_summary(stores)}")
+        elif stores:
+            flags.append(f"pickup: {pricing.pickup_summary(stores)}")
         extra = f" [{', '.join(flags)}]" if flags else ""
         print(f"{i:>2}. ${li.price:>9,.2f}  {_name(li.retailer):<18} {li.title[:90]}{extra}")
         print(f"    {li.url}")
@@ -124,6 +135,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("gpu", help='catalog id or name, e.g. "rtx-5070-ti" or "RTX 5070 Ti"')
     p.add_argument("--open-box", action="store_true", help="count open-box and refurbished listings")
     p.add_argument("--marketplace", action="store_true", help="count third-party marketplace sellers")
+    p.add_argument(
+        "--pickup", metavar="TEXT", default="",
+        help='also count Canada Computers in-store pickup: a province ("ON") or branches, comma-separated',
+    )
     p.add_argument("--top", type=_positive_int, default=10, help="how many offers to list (default 10)")
     p.set_defaults(func=cmd_lookup)
     p = sub.add_parser("health", help="scan one query on every retailer and report status")

@@ -29,7 +29,7 @@ from gpu_alerts import catalog, config, matching, pricing
 from gpu_alerts.bot import GPUAlertBot
 from gpu_alerts.pricing import DEFAULT_POLICY
 from gpu_alerts.retailers import amazon, bestbuy, canadacomputers, http, memoryexpress, newegg, walmart
-from gpu_alerts.retailers.base import Status
+from gpu_alerts.retailers.base import ScrapeResult, Status
 from gpu_alerts.store import Store
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -172,6 +172,43 @@ def test_amazon_cards_from_a_search_without_the_node(site):
     result, found = _golden(AMAZON_CARDS, "rtx-5080")
     assert result.status is Status.OK and len(result.listings) == 3   # sponsored accessories dropped
     assert (len(found), _best(found)) == (3, ("amazon", 2229.99, "B0DTPG3B1N"))
+
+
+CC_PICKUP_FIXTURE = FIXTURES / "canadacomputers_search_rtx5090_pickup.json"
+
+
+@pytest.mark.skipif(not CC_PICKUP_FIXTURE.exists(), reason=f"fixture {CC_PICKUP_FIXTURE.name} not captured yet")
+def test_canada_computers_pickup_only_rtx_5090():
+    # Captured 2026-11-14: every RTX 5090 was "Online - Sold Out", while the $9,499 PNY
+    # sat in three Ontario branches and a ZOTAC in five BC ones. The ONLINE warehouse
+    # line showed "10+" for the PNY and must not count as a branch.
+    model = catalog.by_id("rtx-5090")
+    listings = canadacomputers.parse(CC_PICKUP_FIXTURE.read_text(encoding="utf-8"), model.query)
+    result = ScrapeResult(canadacomputers.RETAILER_ID, model.query, Status.OK, listings)
+    assert all(li.in_stock is False for li in listings)
+
+    assert pricing.offers(model, [result], DEFAULT_POLICY) == []   # pickup off: as in v2.1
+    assert pricing.status_label(result, None, model) == "sold out (2 found)"   # pickup off: v2.1 text
+    assert pricing.status_label(result, None, model, policy=pricing.Policy(pickup=frozenset({"qc"}))) == (
+        "pickup only (8 branches), none on your list")
+
+    on = pricing.Policy(pickup=frozenset({"on"}))
+    (pny,) = pricing.offers(model, [result], on)
+    assert (pny.price, pny.sku) == (9499.0, "VCPNY00227")
+    assert sorted((s.province, s.name, s.quantity) for s in pny.pickup_stores) == [
+        ("ON", "Mississauga", "1"), ("ON", "North York Centerpoint Mall", "1"), ("ON", "Toronto Downtown", "1"),
+    ]
+    label = pricing.status_label(result, pny, model, policy=on)
+    assert label.startswith("$9,499.00, in-store pickup: ") and "Online" not in label
+    for name in ("Mississauga (1)", "North York Centerpoint Mall (1)", "Toronto Downtown (1)"):
+        assert name in label
+
+    mississauga = pricing.Policy(pickup=pricing.parse_pickup("Mississauga")[0])
+    assert [o.sku for o in pricing.offers(model, [result], mississauga)] == ["VCPNY00227"]
+    assert [o.sku for o in pricing.offers(model, [result], pricing.Policy(pickup=frozenset({"bc"})))] == ["VCZOT00303"]
+    assert pricing.offers(model, [result], pricing.Policy(pickup=frozenset({"qc"}))) == []
+    recorded = pricing.offers(model, [result], pricing.RECORD_POLICY)
+    assert [(o.sku, o.price) for o in recorded] == [("VCPNY00227", 9499.0), ("VCZOT00303", 9999.0)]
 
 
 @pytest.mark.parametrize("query, model_id, count, best, statuses", [

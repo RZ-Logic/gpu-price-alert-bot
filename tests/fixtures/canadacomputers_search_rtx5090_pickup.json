@@ -1,0 +1,1187 @@
+{
+ "pagination": {
+  "total_items": 27,
+  "items_shown_from": 1,
+  "items_shown_to": 24,
+  "current_page": 1,
+  "pages_count": 2
+ },
+ "products": [
+  {
+   "id": 269045,
+   "id_category_default": 917,
+   "category_name": "Powered By Nvidia",
+   "name": "PNY GeForce RTX 5090 Triple Fan GDDR7 Triple Fans",
+   "price_amount": 9499,
+   "regular_price_amount": 9499,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/269045/pny-geforce-rtx-5090-triple-fan-gddr7-triple-fans-vcg509032tfxpb1.html",
+   "reference": "VCPNY00227",
+   "condition": {
+    "type": "new"
+   },
+   "cc_info": {
+    "classify": "I"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online_info": "This product is not available online.",
+    "online": false,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail_info": "Due to limited stock or special conditions, this item is available for in-store purchase only. Please check item availability under the stock level tab.",
+    "retail": true,
+    "retail_availability_message": "In Store - Available for Pickup",
+    "online_availability_message": "Online - Sold Out"
+   },
+   "stock_level": {
+    "ON": [
+     {
+      "whid": "LP",
+      "whname": "North York Lawrence",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "TD",
+      "whname": "Toronto Downtown",
+      "stock": {
+       "new": 1,
+       "open_box": 0,
+       "origin_data": {
+        "pickup": 1
+       }
+      }
+     },
+     {
+      "whid": "NO",
+      "whname": "North York Centerpoint Mall",
+      "stock": {
+       "new": 1,
+       "open_box": 0,
+       "origin_data": {
+        "pickup": 1
+       }
+      }
+     },
+     {
+      "whid": "TK",
+      "whname": "Scarborough",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "EB",
+      "whname": "Etobicoke",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MU",
+      "whname": "Markham",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "VA",
+      "whname": "Vaughan",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "RH",
+      "whname": "Richmond Hill",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MI",
+      "whname": "Mississauga",
+      "stock": {
+       "new": 1,
+       "open_box": 0,
+       "origin_data": {
+        "pickup": 1
+       }
+      }
+     },
+     {
+      "whid": "BR",
+      "whname": "Brampton",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "AJ",
+      "whname": "Ajax",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OA",
+      "whname": "Oakville",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "NM",
+      "whname": "Newmarket",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "WH",
+      "whname": "Whitby",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "BL",
+      "whname": "Burlington",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OW",
+      "whname": "Oshawa",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "SC",
+      "whname": "St Catharines",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "HM",
+      "whname": "Hamilton",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "BA",
+      "whname": "Barrie",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "CA",
+      "whname": "Cambridge",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "WA",
+      "whname": "Waterloo",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "LN",
+      "whname": "London",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "KI",
+      "whname": "Kingston",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "KT",
+      "whname": "Kanata",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OM",
+      "whname": "Nepean",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OD",
+      "whname": "Ottawa",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OO",
+      "whname": "Orleans",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ],
+    "ONLINE": [
+     {
+      "whid": "HD",
+      "whname": "Online / Main Warehouse",
+      "stock": {
+       "new": "10+",
+       "open_box": 0
+      }
+     }
+    ],
+    "QC": [
+     {
+      "whid": "GT",
+      "whname": "Gatineau",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "LA",
+      "whname": "Laval",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MC",
+      "whname": "Marche Central",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MO",
+      "whname": "Montreal",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "BS",
+      "whname": "Brossard",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "QV",
+      "whname": "Quebec City",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ],
+    "NS": [
+     {
+      "whid": "HL",
+      "whname": "Halifax",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ],
+    "AB": [
+     {
+      "whid": "SP",
+      "whname": "Edmonton South Park",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "NG",
+      "whname": "Edmonton Northgate",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MA",
+      "whname": "Calgary",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ],
+    "BC": [
+     {
+      "whid": "CQ",
+      "whname": "Coquitlam",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "SU",
+      "whname": "Surrey",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "BN",
+      "whname": "Burnaby",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "VC",
+      "whname": "Vancouver",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "RM",
+      "whname": "Richmond",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": 288293,
+   "id_category_default": 917,
+   "category_name": "Powered By Nvidia",
+   "name": "ASUS ROG Astral GeForce RTX 5090 32GB GPU + ROG Thor 1200W Platinum PSU",
+   "price_amount": 9998.99,
+   "regular_price_amount": 9998.99,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/288293/asus-rog-astral-geforce-rtx-5090-32gb-gpu-rog-thor-1200w-platinum-psu.html",
+   "reference": "VC00000510",
+   "condition": {
+    "type": "new"
+   },
+   "cc_info": {
+    "classify": "B"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online_availability_message": "Online - Sold Out",
+    "online_info": "This product is not available online.",
+    "online": false,
+    "retail_availability": "In Store - Sold Out",
+    "retail_availability_message": "In Store - Sold Out",
+    "retail_info": "This product is currently out of stock. Visit one of our retail stores today to order this item.",
+    "retail": false
+   },
+   "stock_level": {
+    "ON": [
+     {
+      "whid": "LP",
+      "whname": "North York Lawrence",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "TD",
+      "whname": "Toronto Downtown",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "NO",
+      "whname": "North York Centerpoint Mall",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "TK",
+      "whname": "Scarborough",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "EB",
+      "whname": "Etobicoke",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MU",
+      "whname": "Markham",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "VA",
+      "whname": "Vaughan",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "RH",
+      "whname": "Richmond Hill",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MI",
+      "whname": "Mississauga",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "BR",
+      "whname": "Brampton",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "AJ",
+      "whname": "Ajax",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OA",
+      "whname": "Oakville",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "NM",
+      "whname": "Newmarket",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "WH",
+      "whname": "Whitby",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "BL",
+      "whname": "Burlington",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OW",
+      "whname": "Oshawa",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "SC",
+      "whname": "St Catharines",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "HM",
+      "whname": "Hamilton",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "BA",
+      "whname": "Barrie",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "CA",
+      "whname": "Cambridge",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "WA",
+      "whname": "Waterloo",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "LN",
+      "whname": "London",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "KI",
+      "whname": "Kingston",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "KT",
+      "whname": "Kanata",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OM",
+      "whname": "Nepean",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OD",
+      "whname": "Ottawa",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OO",
+      "whname": "Orleans",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ],
+    "ONLINE": [
+     {
+      "whid": "HD",
+      "whname": "Online / Main Warehouse",
+      "stock": {
+       "new": 0,
+       "open_box": null
+      }
+     }
+    ],
+    "QC": [
+     {
+      "whid": "GT",
+      "whname": "Gatineau",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "LA",
+      "whname": "Laval",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MC",
+      "whname": "Marche Central",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MO",
+      "whname": "Montreal",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "BS",
+      "whname": "Brossard",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "QV",
+      "whname": "Quebec City",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ],
+    "NS": [
+     {
+      "whid": "HL",
+      "whname": "Halifax",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ],
+    "AB": [
+     {
+      "whid": "SP",
+      "whname": "Edmonton South Park",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "NG",
+      "whname": "Edmonton Northgate",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MA",
+      "whname": "Calgary",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ],
+    "BC": [
+     {
+      "whid": "CQ",
+      "whname": "Coquitlam",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "SU",
+      "whname": "Surrey",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "BN",
+      "whname": "Burnaby",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "VC",
+      "whname": "Vancouver",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "RM",
+      "whname": "Richmond",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": 297357,
+   "id_category_default": 917,
+   "category_name": "Powered By Nvidia",
+   "name": "ZOTAC GeForce RTX 5090 ArcticStorm AIO GDDR7 Triple Fans",
+   "price_amount": 9999,
+   "regular_price_amount": 9999,
+   "url": "https://www.canadacomputers.com/en/powered-by-nvidia/297357/zotac-geforce-rtx-5090-arcticstorm-aio-gddr7-triple-fans-zt-b50900k-30a.html",
+   "reference": "VCZOT00303",
+   "condition": {
+    "type": "new"
+   },
+   "cc_info": {
+    "classify": "I"
+   },
+   "stock_availability": {
+    "online_availability": "Online - Sold Out",
+    "online_info": "This product is not available online.",
+    "online": false,
+    "retail_availability": "In Store - Available for Pickup",
+    "retail_info": "Due to limited stock or special conditions, this item is available for in-store purchase only. Please check item availability under the stock level tab.",
+    "retail": true,
+    "retail_availability_message": "In Store - Available for Pickup",
+    "online_availability_message": "Online - Sold Out"
+   },
+   "stock_level": {
+    "ON": [
+     {
+      "whid": "LP",
+      "whname": "North York Lawrence",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "TD",
+      "whname": "Toronto Downtown",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "NO",
+      "whname": "North York Centerpoint Mall",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "TK",
+      "whname": "Scarborough",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "EB",
+      "whname": "Etobicoke",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MU",
+      "whname": "Markham",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "VA",
+      "whname": "Vaughan",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "RH",
+      "whname": "Richmond Hill",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MI",
+      "whname": "Mississauga",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "BR",
+      "whname": "Brampton",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "AJ",
+      "whname": "Ajax",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OA",
+      "whname": "Oakville",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "NM",
+      "whname": "Newmarket",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "WH",
+      "whname": "Whitby",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "BL",
+      "whname": "Burlington",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OW",
+      "whname": "Oshawa",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "SC",
+      "whname": "St Catharines",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "HM",
+      "whname": "Hamilton",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "BA",
+      "whname": "Barrie",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "CA",
+      "whname": "Cambridge",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "WA",
+      "whname": "Waterloo",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "LN",
+      "whname": "London",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "KI",
+      "whname": "Kingston",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "KT",
+      "whname": "Kanata",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OM",
+      "whname": "Nepean",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OD",
+      "whname": "Ottawa",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "OO",
+      "whname": "Orleans",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ],
+    "ONLINE": [
+     {
+      "whid": "HD",
+      "whname": "Online / Main Warehouse",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ],
+    "QC": [
+     {
+      "whid": "GT",
+      "whname": "Gatineau",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "LA",
+      "whname": "Laval",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MC",
+      "whname": "Marche Central",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MO",
+      "whname": "Montreal",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "BS",
+      "whname": "Brossard",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "QV",
+      "whname": "Quebec City",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ],
+    "NS": [
+     {
+      "whid": "HL",
+      "whname": "Halifax",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ],
+    "AB": [
+     {
+      "whid": "SP",
+      "whname": "Edmonton South Park",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "NG",
+      "whname": "Edmonton Northgate",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     },
+     {
+      "whid": "MA",
+      "whname": "Calgary",
+      "stock": {
+       "new": 0,
+       "open_box": 0
+      }
+     }
+    ],
+    "BC": [
+     {
+      "whid": "CQ",
+      "whname": "Coquitlam",
+      "stock": {
+       "new": 1,
+       "open_box": 0,
+       "origin_data": {
+        "pickup": 1
+       }
+      }
+     },
+     {
+      "whid": "SU",
+      "whname": "Surrey",
+      "stock": {
+       "new": 1,
+       "open_box": 0,
+       "origin_data": {
+        "pickup": 1
+       }
+      }
+     },
+     {
+      "whid": "BN",
+      "whname": "Burnaby",
+      "stock": {
+       "new": 1,
+       "open_box": 0,
+       "origin_data": {
+        "pickup": 1
+       }
+      }
+     },
+     {
+      "whid": "VC",
+      "whname": "Vancouver",
+      "stock": {
+       "new": 1,
+       "open_box": 0,
+       "origin_data": {
+        "pickup": 1
+       }
+      }
+     },
+     {
+      "whid": "RM",
+      "whname": "Richmond",
+      "stock": {
+       "new": 2,
+       "open_box": 0,
+       "origin_data": {
+        "pickup": 1
+       }
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

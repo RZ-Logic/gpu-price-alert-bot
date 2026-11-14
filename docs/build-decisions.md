@@ -1,6 +1,6 @@
 # Build decisions and lessons learned
 
-The non-obvious choices in v2 and v2.1, each with what it replaced and the evidence that forced it. Back to the [README](../README.md).
+The non-obvious choices in v2, v2.1 and v2.2, each with what it replaced and the evidence that forced it. Back to the [README](../README.md).
 
 ## 1. A rewrite, not a patch
 
@@ -55,3 +55,9 @@ Before the rewrite, two agents searched GitHub for an existing Canadian GPU pric
 v2.1 started from three independent audits of v2.0, by Claude, Gemini and GPT agents. Many of their claims did not hold, including some about code that is not in this repo. So a finding was kept only after a second agent had tried to refute it and failed, and arbiters settled severity disputes under one rubric (high means a wrong, missed or repeated ping, a dead loop, data loss or a security exposure in normal use). 54 issues held up: 10 medium, 44 low, none high. Each regression test was seen failing on the old code before its fix went in. Where a fix was judged worse than the defect, as a bare DESKTOP rule for prebuilt PCs was, the gap is documented in the README instead.
 
 > **The principle:** a review is a list of hypotheses until each claim has been checked.
+
+## 10. Pickup is its own field, not a looser in_stock
+
+On 2026-11-14 the cheapest new in-stock RTX 5090 was a $9,499 PNY Triple Fan at Canada Computers, marked "Online - Sold Out" and "In Store - Available for Pickup" at Toronto Downtown, North York Centerpoint Mall and Mississauga. The adapter read it as sold out, which is true for buying online, so no alert could see it. The quick fix, counting "available for pickup" as in stock, would have pinged people in Vancouver about a card held in Mississauga, and it would have mixed store-only prices into the 30-day lows. So v2.2 leaves `in_stock` meaning buyable online and adds `Listing.pickup_stores`, the branches with new units, read from the `stock_level` block the search JSON already carries. The same block lists the online warehouse, which can show "10+" for a card sold out online, so that entry is skipped, and so are open-box units. An alert counts pickup only for the provinces or branches it names, and the ping names those branches with their counts. Pickup-only rows are stored for history with their branches, and every read that does not ask for pickup leaves them out.
+
+> **The principle:** when a retailer's flag means two things, keep both meanings apart, and let each alert opt in to the one it needs.

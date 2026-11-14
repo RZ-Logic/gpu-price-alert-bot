@@ -1,6 +1,7 @@
 """The Discord bot: slash commands, the background price check and alert delivery."""
 
 import asyncio
+import difflib
 import functools
 import logging
 import re
@@ -21,7 +22,7 @@ from . import catalog, config, pricing
 from .alerts import CROSSED, UNCHANGED, AlertState, Decision, decide
 from .catalog import GPUModel
 from .pricing import DEFAULT_POLICY, RECORD_POLICY, ModelScan, Policy
-from .retailers.base import Listing, ScrapeResult, Status
+from .retailers.base import Listing, PickupStore, ScrapeResult, Status
 from .store import Alert, AlertLimitError, PriceStats, Store, to_cents, utcnow
 
 log = logging.getLogger(__name__)
@@ -69,12 +70,18 @@ def short(text: str, limit: int = 80) -> str:
     return text if len(text) <= limit else text[: limit - 3].rstrip() + "..."
 
 
+def escape(text: str) -> str:
+    """Text someone else typed (a listing title, a user's pickup words), shown as typed:
+    its markdown, mentions and timestamps do not style the message."""
+    text = "".join(ch for ch in text if unicodedata.category(ch) not in ("Cc", "Cf"))   # bidi, zero-width
+    return _LABEL_ESCAPE.sub(r"\\\1", text)
+
+
 def link(label: str, url: str) -> str:
     """A masked link. Labels are often listing titles, which sellers write, so their
     markdown, mentions and timestamps show as typed instead of styling the embed.
     Line-start markdown (headers, quotes, lists) cannot start inside the brackets."""
-    label = "".join(ch for ch in label if unicodedata.category(ch) not in ("Cc", "Cf"))   # bidi, zero-width
-    label = _LABEL_ESCAPE.sub(r"\\\1", label.replace("[", "(").replace("]", ")"))
+    label = escape(label.replace("[", "(").replace("]", ")"))
     safe = url.replace(")", "%29").replace(" ", "%20")
     return f"[{label}]({safe})"
 
@@ -88,13 +95,84 @@ def can_post(interaction: discord.Interaction) -> bool:
 
 
 def policy_for(alert: Alert) -> Policy:
-    return Policy(include_open_box=alert.include_open_box, include_marketplace=alert.include_marketplace)
+    return Policy(
+        include_open_box=alert.include_open_box, include_marketplace=alert.include_marketplace,
+        pickup=alert.pickup,
+    )
+
+
+def _branch_names() -> dict[str, str]:
+    """Pickup token -> the branch name as Canada Computers shows it."""
+    from .retailers.canadacomputers import BRANCHES
+
+    return {pricing.pickup_key(name): name for names in BRANCHES.values() for name in names}
+
+
+def _pickup_parts(tokens: frozenset[str]) -> tuple[list[str], list[str]]:
+    """(province codes, branch names) for display, each sorted."""
+    names = _branch_names()
+    provinces = sorted(t.upper() for t in tokens if t not in names and t != pricing.ANY_PICKUP)
+    branches = sorted(names[t] for t in tokens if t in names)
+    return provinces, branches
+
+
+def pickup_where(tokens: frozenset[str]) -> str:
+    """Where pickup counts, to follow "pickup": "in ON", "at Burlington, Oakville", "in ON or at Oakville"."""
+    if pricing.ANY_PICKUP in tokens:
+        return "at any branch"
+    provinces, branches = _pickup_parts(tokens)
+    parts = (["in " + ", ".join(provinces)] if provinces else []) + (["at " + ", ".join(branches)] if branches else [])
+    return " or ".join(parts)
+
+
+def pickup_places(tokens: frozenset[str]) -> str:
+    """The same as a list of places: "every ON branch, Oakville"."""
+    if pricing.ANY_PICKUP in tokens:
+        return "any branch"
+    provinces, branches = _pickup_parts(tokens)
+    return ", ".join([f"every {p} branch" for p in provinces] + branches)
+
+
+def unknown_pickup(words: list[str], quote: Callable[[str], str] = str, limit: int = 5) -> str:
+    """Why pickup text was refused, with the closest branch names for each word.
+
+    A word that starts branch names ("North York") offers those first, since a
+    fuzzy match alone misses the longer names.
+    """
+    from .retailers.canadacomputers import BRANCHES
+
+    names = _branch_names()
+    bits = []
+    for word in words[:limit]:
+        key = pricing.pickup_key(word)
+        close = [k for k in names if key and k.startswith(key)]
+        close += [k for k in difflib.get_close_matches(key, list(names), n=3, cutoff=0.6) if k not in close]
+        hint = f" (did you mean {' or '.join(names[k] for k in close[:3])}?)" if close else ""
+        bits.append(quote(short(word, 40)) + hint)
+    if len(words) > limit:
+        bits.append(f"and {len(words) - limit} more")
+    return (
+        f"Not a Canada Computers branch or province: {', '.join(bits)}. "
+        f"Use a province code ({', '.join(BRANCHES)}) or branch names, comma-separated."
+    )
+
+
+def pickup_only(offer, policy: Policy, limit: int = 4) -> str:
+    """The branches a pickup-only offer (a Listing or a stored Offer) is at, under the policy.
+    Branch names come from the retailer's JSON, so they are escaped like listing titles."""
+    stores = policy.pickup_matches(offer) or offer.pickup_stores
+    return pricing.pickup_summary(
+        (PickupStore(s.province, escape(s.name), s.quantity) for s in stores), limit
+    )
 
 
 def policy_note(policy: Policy) -> str:
     parts = ["new" if not policy.include_open_box else "new, open box or refurbished"]
     parts.append("any seller" if policy.include_marketplace else "sold by the retailer")
-    return ", ".join(parts)
+    note = ", ".join(parts)
+    if policy.pickup:
+        note += f", or in-store pickup {pickup_where(policy.pickup)}"
+    return note
 
 
 def stats_line(stats: PriceStats | None) -> str:
@@ -143,9 +221,12 @@ def alert_embed(
     alert: Alert, model: GPUModel, best: Listing, found: list[Listing], stats: PriceStats | None, kind: str
 ) -> discord.Embed:
     title = f"{model.name} is under your target" if kind == CROSSED else f"{model.name} dropped again"
+    policy = policy_for(alert)
+    description = f"**${best.price:,.2f}** at {retailer_name(best.retailer)}\n{link(short(best.title), best.url)}"
+    if best.in_stock is False:   # only a pickup policy lets a card sold out online through
+        description += f"\nIn-store pickup only: {pickup_only(best, policy)}"
     embed = discord.Embed(
-        title=title, url=best.url, color=COLOR_OK, timestamp=discord.utils.utcnow(),
-        description=f"**${best.price:,.2f}** at {retailer_name(best.retailer)}\n{link(short(best.title), best.url)}",
+        title=title, url=best.url, color=COLOR_OK, timestamp=discord.utils.utcnow(), description=description,
     )
     embed.add_field(name="Your target", value=money(alert.target_cents), inline=True)
     if stats and stats.count:
@@ -155,10 +236,14 @@ def alert_embed(
     if others:
         embed.add_field(
             name="Next best",
-            value="\n".join(f"{retailer_name(li.retailer)}: {link(f'${li.price:,.2f}', li.url)}" for li in others),
+            value="\n".join(
+                f"{retailer_name(li.retailer)}: {link(f'${li.price:,.2f}', li.url)}"
+                + (f" (pickup only: {pickup_only(li, policy, 2)})" if li.in_stock is False else "")
+                for li in others
+            )[:1024],
             inline=False,
         )
-    embed.set_footer(text=f"Counting {policy_note(policy_for(alert))}. You will hear again only on a further drop.")
+    embed.set_footer(text=f"Counting {policy_note(policy)}. You will hear again only on a further drop.")
     return embed
 
 
@@ -477,6 +562,7 @@ class GPUAlertBot(discord.Client):
                 stats = await self._db(
                     store.price_stats, model.id, 30,
                     include_open_box=alert.include_open_box, include_marketplace=alert.include_marketplace,
+                    pickup=alert.pickup,
                 )
                 delivered = await self.deliver(alert, alert_embed(alert, model, best, found, stats, decision.kind))
             now = utcnow()
@@ -713,6 +799,7 @@ class GPUAlertBot(discord.Client):
             target="Target price in CAD, before tax",
             open_box="Also count open-box and refurbished listings",
             marketplace="Also count third-party marketplace sellers",
+            pickup="Also count in-store pickup at Canada Computers: a province (ON) or branches, comma-separated",
         )
         @app_commands.autocomplete(gpu=gpu_autocomplete)
         async def alert_cmd(
@@ -721,10 +808,18 @@ class GPUAlertBot(discord.Client):
             target: app_commands.Range[int, 100, 20000],
             open_box: bool = False,
             marketplace: bool = False,
+            pickup: str | None = None,
         ) -> None:
             model = self._model_arg(gpu)
             if model is None:
                 await self._reply(interaction, unknown_gpu, ephemeral=True)
+                return
+            # Blank is off. A typo must not save an alert that quietly never counts a store.
+            tokens, unknown = pricing.parse_pickup(pickup)
+            if unknown:
+                await self._reply(
+                    interaction, unknown_pickup(unknown, quote=escape) + " The alert was not saved.", ephemeral=True
+                )
                 return
             store = self._store()
             # A ping in a channel the bot cannot post in would fail every check (slash
@@ -734,7 +829,7 @@ class GPUAlertBot(discord.Client):
                 alert, created = await self._db(
                     store.upsert_alert, interaction.user.id, model.id, target * 100,
                     channel_id=None if by_dm else interaction.channel_id, guild_id=interaction.guild_id,
-                    include_open_box=open_box, include_marketplace=marketplace,
+                    include_open_box=open_box, include_marketplace=marketplace, pickup=tokens,
                     max_per_user=MAX_ALERTS_PER_USER,
                 )
             except AlertLimitError:
@@ -750,13 +845,19 @@ class GPUAlertBot(discord.Client):
             # from a /lookup months ago.
             at, latest = await self._db(
                 store.latest_offers, model.id, max_age=PRICES_FRESH,
-                include_open_box=open_box, include_marketplace=marketplace,
+                include_open_box=open_box, include_marketplace=marketplace, pickup=alert.pickup,
             )
             stats = await self._db(
-                store.price_stats, model.id, 30, include_open_box=open_box, include_marketplace=marketplace
+                store.price_stats, model.id, 30, include_open_box=open_box, include_marketplace=marketplace,
+                pickup=alert.pickup,
             )
             verb = "Alert set" if created else "Alert updated"
             lines = [f"{verb}: **{model.name}** at or below **{money(alert.target_cents)}** ({policy_note(policy)})."]
+            if alert.pickup:
+                lines.append(
+                    f"Counting pickup at: {pickup_places(alert.pickup)} (Canada Computers, new units in store; "
+                    "online stock still counts too)."
+                )
             if by_dm:
                 lines.append(
                     "I cannot post in this channel, so pings come by DM. Allow direct messages from "
@@ -770,8 +871,9 @@ class GPUAlertBot(discord.Client):
                 )
             if latest:
                 o = latest[0]
+                where = f", in-store pickup only at {pickup_only(o, policy)}" if o.in_stock is False else ""
                 lines.append(
-                    f"Current best: {money(o.price_cents)} at {retailer_name(o.retailer)} "
+                    f"Current best: {money(o.price_cents)} at {retailer_name(o.retailer)}{where} "
                     f"(checked {discord.utils.format_dt(at, 'R')})."
                 )
                 if o.price_cents <= alert.target_cents:
@@ -816,6 +918,8 @@ class GPUAlertBot(discord.Client):
                 else:
                     seen = f"last price {money(a.last_price_cents)} ({discord.utils.format_dt(a.last_checked_at, 'R')})"
                 extras = [x for x, on in (("open box", a.include_open_box), ("marketplace", a.include_marketplace)) if on]
+                if a.pickup:
+                    extras.append(f"pickup {pickup_where(a.pickup)}")
                 embed.add_field(
                     name=model.name if model else a.model_id,
                     value=(
@@ -857,6 +961,8 @@ class GPUAlertBot(discord.Client):
                             f"{link(f'${ev.best.price:,.2f}', ev.best.url)} at {retailer_name(ev.best.retailer)}, "
                             f"target {money(ev.alert.target_cents)}"
                         )
+                        if ev.best.in_stock is False:
+                            value += f"\nIn-store pickup only: {pickup_only(ev.best, policy_for(ev.alert))}"
                         if to_cents(ev.best.price) <= ev.alert.target_cents:
                             value += "\n**At or under your target.**"
                     embed.add_field(name=ev.model.name, value=value[:1024], inline=False)
